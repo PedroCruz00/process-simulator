@@ -1,0 +1,15 @@
+export const STATES = {
+  NEW: "New",
+  READY: "Ready",
+  RUNNING: "Running",
+  WAITING: "Waiting",
+  TERMINATED: "Terminated",
+};
+
+export const VALID_TRANSITIONS = {
+  [STATES.NEW]: [STATES.READY],
+  [STATES.READY]: [STATES.RUNNING],
+  [STATES.RUNNING]: [STATES.READY, STATES.WAITING, STATES.TERMINATED],
+  [STATES.WAITING]: [STATES.READY],
+  [STATES.TERMINATED]: [],
+};
