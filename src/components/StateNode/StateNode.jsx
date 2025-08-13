@@ -1,5 +1,6 @@
 import React from "react";
 import { STATE_COLORS } from "../../constants/colors";
+import { STATES } from "../../constants/states";
 
 export const StateNode = ({
   state,
