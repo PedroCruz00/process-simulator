@@ -12,6 +12,10 @@ export class Process {
       CX: Math.floor(Math.random() * 255),
     };
     this.systemCalls = [];
+
+    // 🔹 Tiempo total de CPU necesario (aleatorio entre 3 y 10 segundos)
+    this.remainingTime = Math.floor(Math.random() * 7000) + 3000;
+
     this.stateHistory = [
       {
         state: STATES.NEW,
@@ -41,11 +45,11 @@ export class Process {
       timeInPreviousState: timeInCurrentState,
     });
 
-    // Simular llamadas al sistema
+    // 🔹 Registro de llamadas al sistema
     if (newState === STATES.RUNNING) {
       this.systemCalls.push(`exec() - ${now.toLocaleTimeString()}`);
-    } else if (newState === STATES.WAITING) {
-      this.systemCalls.push(`read() - ${now.toLocaleTimeString()}`);
+    } else if (newState === STATES.BLOCKED) {
+      this.systemCalls.push(`I/O wait - ${now.toLocaleTimeString()}`);
     }
   }
 
