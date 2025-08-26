@@ -3,20 +3,24 @@ import React from "react";
 export const Notification = ({ message, type, timestamp }) => {
   return (
     <div
-      className={`p-4 rounded-lg shadow-lg transform transition-all duration-300 ${
+      className={`p-4 rounded-xl shadow-lg transform transition-all duration-300 text-center backdrop-blur-sm border relative overflow-hidden ${
         type === "error"
-          ? "bg-red-500/90 text-white"
+          ? "bg-red-500/95 text-white border-red-300/50"
           : type === "success"
-          ? "bg-green-500/90 text-white"
-          : "bg-blue-500/90 text-white"
+          ? "bg-green-500/95 text-white border-green-300/50"
+          : "bg-blue-500/95 text-white border-blue-300/50"
       }`}
     >
-      <div className="flex items-center gap-2">
-        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-        <span className="font-medium">{message}</span>
-      </div>
-      <div className="text-xs mt-1 opacity-80">
-        {timestamp.toLocaleTimeString()}
+      <div className="relative z-10">
+        <div className="flex items-center justify-center gap-3">
+          <div className={`w-3 h-3 rounded-full animate-pulse shadow-sm ${
+            type === "error" ? "bg-red-200" : type === "success" ? "bg-green-200" : "bg-blue-200"
+          }`}></div>
+          <span className="font-semibold text-sm">{message}</span>
+        </div>
+        <div className="text-xs mt-2 opacity-80 font-medium">
+          {timestamp.toLocaleTimeString()}
+        </div>
       </div>
     </div>
   );

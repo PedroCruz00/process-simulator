@@ -12,6 +12,10 @@ export class Process {
       CX: Math.floor(Math.random() * 255),
     };
     this.systemCalls = [];
+
+    // 🔹 Tiempo total de CPU necesario (aleatorio entre 3 y 10 segundos)
+    this.remainingTime = Math.floor(Math.random() * 7000) + 3000;
+
     this.stateHistory = [
       {
         state: STATES.NEW,
@@ -20,6 +24,8 @@ export class Process {
       },
     ];
     this.stateStartTime = new Date();
+    // Callback opcional asignado externamente para escuchar transiciones
+    this.onTransition = null;
   }
 
   transition(newState, reason = "") {
@@ -41,11 +47,26 @@ export class Process {
       timeInPreviousState: timeInCurrentState,
     });
 
-    // Simular llamadas al sistema
+    // 🔹 Registro de llamadas al sistema
     if (newState === STATES.RUNNING) {
       this.systemCalls.push(`exec() - ${now.toLocaleTimeString()}`);
-    } else if (newState === STATES.WAITING) {
-      this.systemCalls.push(`read() - ${now.toLocaleTimeString()}`);
+    } else if (newState === STATES.BLOCKED) {
+      this.systemCalls.push(`I/O wait - ${now.toLocaleTimeString()}`);
+    }
+
+    // Notificar al listener externo
+    if (typeof this.onTransition === "function") {
+      try {
+        this.onTransition({
+          pid: this.pid,
+          from: currentState,
+          to: newState,
+          reason,
+          timestamp: now,
+        });
+      } catch (_) {
+        // ignorar errores del listener para no romper la simulación
+      }
     }
   }
 
