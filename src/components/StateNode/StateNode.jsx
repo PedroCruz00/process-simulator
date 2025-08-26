@@ -27,8 +27,8 @@ export const StateNode = ({
   return (
     <div className="relative group flex justify-center">
       <div
-        className={`w-32 h-32 rounded-full border-4 border-white flex flex-col items-center justify-center cursor-pointer transform transition-all duration-300 shadow-xl hover:shadow-2xl relative overflow-hidden group ${
-          isAnimating ? "scale-110 animate-pulse" : "hover:scale-105"
+        className={`w-36 h-36 rounded-full border-4 border-white flex flex-col items-center justify-center cursor-pointer transform transition-all duration-300 shadow-xl hover:shadow-2xl relative overflow-hidden group ${
+          isAnimating ? "scale-110 ring-4 ring-white/60" : "hover:scale-105"
         }`}
         style={{
           backgroundColor: STATE_COLORS[state],
@@ -44,7 +44,7 @@ export const StateNode = ({
         <div className="text-white font-bold text-base text-center drop-shadow-sm relative z-10">
           {state}
         </div>
-        <div className="text-white text-3xl font-bold drop-shadow-sm relative z-10">
+        <div className="text-white text-4xl font-bold drop-shadow-sm relative z-10">
           {processes.length}
         </div>
         {state === STATES.BLOCKED && processes.length > 0 && (

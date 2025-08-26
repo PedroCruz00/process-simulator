@@ -24,6 +24,7 @@ const ProcessLifecycleSimulator = () => {
   const [nextPID, setNextPID] = useState(1);
   const [isAutoMode, setIsAutoMode] = useState(false);
   const [speed, setSpeed] = useState(1000);
+  const [animationDurationMs, setAnimationDurationMs] = useState(1200);
   const [showDetails, setShowDetails] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [animatingTransition, setAnimatingTransition] = useState(null);
@@ -195,6 +196,13 @@ const ProcessLifecycleSimulator = () => {
         if (process.state === STATES.NEW && Math.random() < 0.4) {
           try {
             processor.admitProcess(process);
+            setAnimatingTransition({
+              processId: process.pid,
+              fromState: STATES.NEW,
+              toState: STATES.READY,
+              timestamp: new Date(),
+            });
+            setTimeout(() => setAnimatingTransition(null), 1000);
             addNotification(`Proceso ${process.pid} admitido`, "info");
           } catch (error) {
             console.error("Error admitiendo proceso:", error);
@@ -203,6 +211,16 @@ const ProcessLifecycleSimulator = () => {
       });
 
       // 2. Planificar procesos (READY → RUNNING)
+      if (!processor.currentProcess && processor.readyQueue.length > 0) {
+        const next = processor.readyQueue[0];
+        setAnimatingTransition({
+          processId: next.pid,
+          fromState: STATES.READY,
+          toState: STATES.RUNNING,
+          timestamp: new Date(),
+        });
+        setTimeout(() => setAnimatingTransition(null), animationDurationMs);
+      }
       processor.schedule();
 
       // 3. Simular eventos aleatorios en procesos RUNNING
@@ -215,6 +233,13 @@ const ProcessLifecycleSimulator = () => {
           try {
             currentProcess.transition(STATES.TERMINATED, "Auto-finalización");
             processor.currentProcess = null;
+            setAnimatingTransition({
+              processId: currentProcess.pid,
+              fromState: STATES.RUNNING,
+              toState: STATES.TERMINATED,
+              timestamp: new Date(),
+            });
+            setTimeout(() => setAnimatingTransition(null), animationDurationMs);
             addNotification(
               `Proceso ${currentProcess.pid} terminado`,
               "success"
@@ -228,6 +253,13 @@ const ProcessLifecycleSimulator = () => {
             currentProcess.transition(STATES.BLOCKED, "Auto-E/S");
             processor.blockedQueue.push(currentProcess);
             processor.currentProcess = null;
+            setAnimatingTransition({
+              processId: currentProcess.pid,
+              fromState: STATES.RUNNING,
+              toState: STATES.BLOCKED,
+              timestamp: new Date(),
+            });
+            setTimeout(() => setAnimatingTransition(null), animationDurationMs);
             addNotification(
               `Proceso ${currentProcess.pid} esperando E/S`,
               "info"
@@ -250,6 +282,13 @@ const ProcessLifecycleSimulator = () => {
                         processor.blockedQueue.splice(blockedIndex, 1);
                       }
                       processor.readyQueue.push(p);
+                      setAnimatingTransition({
+                        processId: p.pid,
+                        fromState: STATES.BLOCKED,
+                        toState: STATES.READY,
+                        timestamp: new Date(),
+                      });
+                      setTimeout(() => setAnimatingTransition(null), animationDurationMs);
                       addNotification(
                         `Proceso ${p.pid} listo después de E/S`,
                         "info"
@@ -271,6 +310,13 @@ const ProcessLifecycleSimulator = () => {
             currentProcess.transition(STATES.READY, "Auto-quantum expirado");
             processor.readyQueue.push(currentProcess);
             processor.currentProcess = null;
+            setAnimatingTransition({
+              processId: currentProcess.pid,
+              fromState: STATES.RUNNING,
+              toState: STATES.READY,
+              timestamp: new Date(),
+            });
+            setTimeout(() => setAnimatingTransition(null), animationDurationMs);
             addNotification(
               `Proceso ${currentProcess.pid} quantum expirado`,
               "info"
@@ -293,6 +339,13 @@ const ProcessLifecycleSimulator = () => {
               processor.blockedQueue.splice(blockedIndex, 1);
             }
             processor.readyQueue.push(process);
+            setAnimatingTransition({
+              processId: process.pid,
+              fromState: STATES.BLOCKED,
+              toState: STATES.READY,
+              timestamp: new Date(),
+            });
+            setTimeout(() => setAnimatingTransition(null), animationDurationMs);
             addNotification(`Proceso ${process.pid} E/S completada`, "info");
           } catch (error) {
             console.error("Error completando E/S:", error);
@@ -316,6 +369,15 @@ const ProcessLifecycleSimulator = () => {
 
     return () => clearInterval(intervalRef.current);
   }, [isAutoMode, speed]);
+
+  // Ajustar duración de animaciones según velocidad
+  useEffect(() => {
+    // mapeo simple: más lento -> animación más larga
+    if (speed >= 3000) setAnimationDurationMs(1800);
+    else if (speed >= 2000) setAnimationDurationMs(1500);
+    else if (speed >= 1000) setAnimationDurationMs(1200);
+    else setAnimationDurationMs(900);
+  }, [speed]);
 
   // Generar reporte CSV
   const generateReport = () => {
@@ -543,6 +605,7 @@ const ProcessLifecycleSimulator = () => {
                   onChange={(e) => setSpeed(Number(e.target.value))}
                   className="w-full bg-white/80 text-gray-700 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm hover:shadow-md transition-all duration-200 font-medium"
                 >
+                  <option value={3000} className="text-gray-900">🐢 Muy Lenta</option>
                   <option value={2000} className="text-gray-900">
                     🐌 Lenta
                   </option>
@@ -658,7 +721,7 @@ const ProcessLifecycleSimulator = () => {
           </div>
 
           {/* Diagrama de Estados */}
-          <div className="lg:col-span-6 bg-white/95 backdrop-blur-xl rounded-3xl p-8 border-2 border-green-200/40 shadow-2xl hover:shadow-3xl transition-all duration-300 relative overflow-hidden">
+          <div className="lg:col-span-9 bg-white/95 backdrop-blur-xl rounded-3xl p-8 border-2 border-green-200/40 shadow-2xl hover:shadow-3xl transition-all duration-300 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-green-50/30 to-emerald-50/30"></div>
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500"></div>
             <div className="relative z-10">
@@ -670,11 +733,11 @@ const ProcessLifecycleSimulator = () => {
                 <span className="text-gray-800">Diagrama de Estados</span>
               </h2>
 
-              <div className="relative h-[500px] bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-4 overflow-hidden border-2 border-green-200/30 shadow-inner">
+              <div className="relative h-[640px] bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 overflow-hidden border-2 border-green-200/30 shadow-inner">
                 <div className="absolute inset-0 bg-gradient-to-br from-green-100/20 to-emerald-100/20"></div>
                 <div className="relative z-10 h-full">
                   {/* Estados */}
-                  <div className="grid grid-cols-3 gap-8 h-full items-center">
+                  <div className="grid grid-cols-3 gap-10 h-full items-center">
                     {/* Fila superior */}
                     <div className="col-span-3 flex justify-center">
                       <StateNode
@@ -740,6 +803,7 @@ const ProcessLifecycleSimulator = () => {
                       <TransitionArrow
                         from={animatingTransition.fromState}
                         to={animatingTransition.toState}
+                        durationMs={animationDurationMs}
                       />
                       <div className="absolute left-1/2 top-0 transform -translate-x-1/2 -translate-y-8 z-50">
                         <span className="bg-yellow-100 text-yellow-800 px-4 py-1 rounded-full shadow text-xs font-bold border border-yellow-300 animate-bounce">
@@ -776,42 +840,43 @@ const ProcessLifecycleSimulator = () => {
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Panel de Información */}
-          <div className="lg:col-span-3 bg-white/95 backdrop-blur-xl rounded-3xl p-6 border-2 border-purple-200/40 shadow-2xl hover:shadow-3xl transition-all duration-300 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-50/30 to-pink-50/30"></div>
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500"></div>
-            <div className="relative z-10">
-              <h2 className="text-lg font-bold text-gray-800 mb-3 text-center flex items-center justify-center gap-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
-                  <Info className="w-5 h-5 text-white drop-shadow-sm" />
-                </div>
-                <span className="text-gray-800">Información del Proceso</span>
-              </h2>
-
-              {selectedProcess ? (
-                <ProcessInfo
-                  process={selectedProcess}
-                  showDetails={showDetails}
-                  onTransition={(newState, reason) =>
-                    performTransition(selectedProcess.pid, newState, reason)
-                  }
-                />
-              ) : (
-                <div className="text-center text-gray-500 py-6 flex flex-col items-center justify-center">
-                  <div className="w-12 h-12 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-3 shadow-sm">
-                    <Info className="w-6 h-6 text-gray-400" />
+        {/* Footer de Información del Proceso */}
+        <div className="mt-8 w-full">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 border-2 border-purple-200/40 shadow-2xl transition-all duration-300 overflow-hidden max-w-[1400px] mx-auto">
+            <div className="relative">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500"></div>
+              <div className="pt-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center shadow-sm relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+                    <Info className="w-4 h-4 text-white" />
                   </div>
-                  <h3 className="text-base font-semibold text-gray-700 mb-1">
-                    No hay proceso seleccionado
-                  </h3>
-                  <p className="text-gray-500 text-xs">
-                    Haz clic en un proceso del diagrama para ver su información
-                    detallada
-                  </p>
+                  <span className="text-base md:text-lg font-bold text-gray-800">Información del Proceso</span>
                 </div>
-              )}
+                {selectedProcess ? (
+                  <ProcessInfo
+                    process={selectedProcess}
+                    showDetails={showDetails}
+                    onTransition={(newState, reason) =>
+                      performTransition(selectedProcess.pid, newState, reason)
+                    }
+                  />
+                ) : (
+                  <div className="text-center text-gray-500 py-2 flex flex-col items-center justify-center">
+                    <div className="w-10 h-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-2 shadow-sm">
+                      <Info className="w-5 h-5 text-gray-400" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-1">
+                      No hay proceso seleccionado
+                    </h3>
+                    <p className="text-gray-500 text-xs">
+                      Haz clic en un proceso del diagrama para ver su información detallada
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
