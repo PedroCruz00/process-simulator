@@ -22,6 +22,7 @@ a {
   color: #646cff;
   text-decoration: inherit;
 }
+
 a:hover {
   color: #535bf2;
 }
@@ -46,34 +47,287 @@ button {
 button:hover {
   border-color: #646cff;
 }
+
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-:root {
-  color: #213547;
-  background-color: #ffffff;
-}
-
-a:hover {
-  color: #747bff;
-}
-
-button {
-  background-color: #f9f9f9;
-}
-
 /* Animaciones personalizadas */
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
+    transform: scale(1);
   }
+
   50% {
-    opacity: 0.5;
+    opacity: 0.8;
+    transform: scale(1.05);
   }
 }
 
+@keyframes pulseGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 5px currentColor;
+  }
+
+  50% {
+    box-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+}
+
+@keyframes slideInFromLeft {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromRight {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+
+  70% {
+    transform: scale(0.9);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes rotateRing {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes particleFlow {
+  0% {
+    transform: translateX(0) translateY(0) scale(0);
+    opacity: 0;
+  }
+
+  10% {
+    transform: translateX(10%) translateY(-2%) scale(1);
+    opacity: 1;
+  }
+
+  90% {
+    transform: translateX(90%) translateY(-5%) scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(100%) translateY(-8%) scale(0);
+    opacity: 0;
+  }
+}
+
+/* Clases de utilidad para animaciones */
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.animate-slide-in-left {
+  animation: slideInFromLeft 0.5s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInFromRight 0.5s ease-out;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.animate-bounce-in {
+  animation: bounceIn 0.6s ease-out;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+.animate-rotate-ring {
+  animation: rotateRing 2s linear infinite;
+}
+
+.animate-particle-flow {
+  animation: particleFlow 1.5s ease-in-out infinite;
+}
+
+/* Efectos de transición */
+.transition-glow {
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.transition-glow:hover {
+  box-shadow: 0 0 20px currentColor;
+  transform: translateY(-2px);
+}
+
+/* Estilos para el diagrama de estados */
+.state-diagram-container {
+  position: relative;
+  overflow: visible !important;
+}
+
+.transition-arrow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/*Notificaciones*/
+.notification-enter {
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+.notification-exit {
+  animation: slideInFromRight 0.3s ease-out reverse;
+}
+
+/* Estilos para elementos con brillo */
+.glow-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.glow-effect::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.glow-effect:hover::before {
+  opacity: 1;
+}
+
+/* Animaciones específicas para los estados */
+.state-new {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.state-ready {
+  animation: slideInFromLeft 0.5s ease-out;
+}
+
+.state-running {
+  animation: pulseGlow 1s ease-in-out;
+}
+
+.state-blocked {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.state-terminated {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+/* Responsividad */
+@media (max-width: 768px) {
+  .state-node {
+    width: 100px;
+    height: 100px;
+    font-size: 0.8rem;
+  }
+
+  .transition-label {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* Accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+
+  .animate-pulse,
+  .animate-bounce,
+  .animate-spin,
+  .animate-pulse-glow {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Contraste */
+@media (prefers-contrast: high) {
+  .state-node {
+    border-width: 3px;
+  }
+
+  .transition-arrow {
+    stroke-width: 4;
+  }
 }

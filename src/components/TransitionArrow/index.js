@@ -1,1 +1,1 @@
-export { default } from "./TransitionArrow";
+export { default, StaticTransitionArrows } from "./TransitionArrow";
