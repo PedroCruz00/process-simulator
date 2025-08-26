@@ -24,6 +24,8 @@ export class Process {
       },
     ];
     this.stateStartTime = new Date();
+    // Callback opcional asignado externamente para escuchar transiciones
+    this.onTransition = null;
   }
 
   transition(newState, reason = "") {
@@ -50,6 +52,21 @@ export class Process {
       this.systemCalls.push(`exec() - ${now.toLocaleTimeString()}`);
     } else if (newState === STATES.BLOCKED) {
       this.systemCalls.push(`I/O wait - ${now.toLocaleTimeString()}`);
+    }
+
+    // Notificar al listener externo
+    if (typeof this.onTransition === "function") {
+      try {
+        this.onTransition({
+          pid: this.pid,
+          from: currentState,
+          to: newState,
+          reason,
+          timestamp: now,
+        });
+      } catch (_) {
+        // ignorar errores del listener para no romper la simulación
+      }
     }
   }
 

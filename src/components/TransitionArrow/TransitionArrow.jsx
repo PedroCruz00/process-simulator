@@ -28,20 +28,31 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
     return () => clearTimeout(timer);
   }, [from, to, durationMs]);
 
-  const { x1, y1, x2, y2, midX, midY } = useMemo(() => {
+  const { x1, y1, x2, y2, midX, midY, cx, cy } = useMemo(() => {
     const start = NODE_POSITIONS[from] || { x: 50, y: 50 };
     const end = NODE_POSITIONS[to] || { x: 50, y: 50 };
     const sx = start.x;
     const sy = start.y;
     const ex = end.x;
     const ey = end.y;
+    // Control point para curva: punto medio desplazado perpendicularmente
+    const dx = ex - sx;
+    const dy = ey - sy;
+    const length = Math.sqrt(dx * dx + dy * dy) || 1;
+    const nx = -dy / length; // normalizada
+    const ny = dx / length;
+    const offset = 12; // controla la curvatura
+    const mx = (sx + ex) / 2;
+    const my = (sy + ey) / 2;
     return {
       x1: sx,
       y1: sy,
       x2: ex,
       y2: ey,
-      midX: (sx + ex) / 2,
-      midY: (sy + ey) / 2,
+      midX: mx,
+      midY: my,
+      cx: mx + nx * offset,
+      cy: my + ny * offset,
     };
   }, [from, to]);
 
@@ -55,7 +66,7 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
 
   return (
     <div className="absolute inset-0 pointer-events-none">
-      <svg className="w-full h-full overflow-visible">
+      <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
         <defs>
           <marker id="arrow" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="strokeWidth">
             <path d="M0,0 L10,5 L0,10 z" fill={colors.stroke} />
@@ -67,64 +78,34 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
-          <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#fff" stopOpacity="0.9" />
-            <stop offset="50%" stopColor={colors.stroke} stopOpacity="1" />
-            <stop offset="100%" stopColor="#fff" stopOpacity="0.9" />
-          </linearGradient>
         </defs>
 
-        {/* Halo animado */}
-        <circle cx={`${x1}%`} cy={`${y1}%`} r="10" fill={colors.glow}>
-          <animate attributeName="r" from="0" to="18" dur={`${Math.min(
-            0.6,
-            durationMs / 1800
-          )}s`} fill="freeze" />
-          <animate attributeName="opacity" from="0.9" to="0" dur={`${Math.min(
-            0.6,
-            durationMs / 1800
-          )}s`} fill="freeze" />
-        </circle>
+        {/* Halo en origen */}
+        <circle cx={x1} cy={y1} r="2.5" fill={colors.stroke} opacity="0.9" />
 
-        {/* Línea principal */}
-        <line
-          x1={`${x1}%`}
-          y1={`${y1}%`}
-          x2={`${x2}%`}
-          y2={`${y2}%`}
+        {/* Trayectoria curva */}
+        <path
+          d={`M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`}
           stroke={colors.stroke}
-          strokeWidth="4"
-          strokeLinecap="round"
+          strokeWidth="2.5"
+          fill="none"
           markerEnd="url(#arrow)"
           filter="url(#glow)"
           style={{
-            strokeDasharray: 200,
-            strokeDashoffset: 200,
+            strokeDasharray: 300,
+            strokeDashoffset: 300,
             animation: `dash ${durationMs / 1000}s ease forwards`,
           }}
         />
 
-        {/* Partícula viajera */}
-        <circle r="5" fill="url(#grad)">
-          <animateMotion dur={`${durationMs / 1000}s`} path={`M ${x1}% ${y1}% L ${x2}% ${y2}%`} rotate="auto" fill="freeze" />
-        </circle>
-
         {/* Etiqueta de transición */}
         <g>
-          <rect x={`${midX - 10}%`} y={`${midY - 8}%`} rx="6" ry="6" width="120" height="24" fill="rgba(255,255,255,0.9)" stroke={colors.stroke} strokeWidth="1" />
-          <text x={`${midX - 6}%`} y={`${midY + 8}%`} fill="#1f2937" fontSize="12" fontWeight="700">
+          <rect x={midX - 10} y={midY - 8} rx="4" ry="4" width="20" height="6" fill={colors.glow} opacity="0.25" />
+          <text x={midX - 6} y={midY + 1} fill="#1f2937" fontSize="3" fontWeight="700">
             {from} → {to}
           </text>
         </g>
       </svg>
-
-      {/* Glow de fondo */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `radial-gradient(600px circle at ${midX}% ${midY}%, ${colors.glow} 0%, transparent 60%)`,
-        }}
-      />
 
       <style>{`
         @keyframes dash { to { stroke-dashoffset: 0; } }
