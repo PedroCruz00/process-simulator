@@ -6,6 +6,7 @@ export class Processor {
     this.readyQueue = [];
     this.blockedQueue = [];
     this.currentProcess = null;
+    this.autoScheduling = false; // Desactivar scheduling automático por defecto
   }
 
   admitProcess(process) {
@@ -21,8 +22,16 @@ export class Processor {
     this.currentProcess = this.readyQueue.shift();
     this.currentProcess.transition(STATES.RUNNING, "Planificador asigna CPU");
 
-    // Simular ejecución por quantum
-    setTimeout(() => this.dispatch(), this.quantum);
+    // Solo usar scheduling automático si está habilitado
+    if (this.autoScheduling) {
+      // Simular ejecución por quantum
+      setTimeout(() => this.dispatch(), this.quantum);
+    }
+  }
+
+  // Método para habilitar/deshabilitar scheduling automático
+  setAutoScheduling(enabled) {
+    this.autoScheduling = enabled;
   }
 
   dispatch() {
@@ -53,6 +62,53 @@ export class Processor {
     }
 
     this.currentProcess = null;
-    this.schedule(); // planificar el siguiente
+    if (this.autoScheduling) {
+      this.schedule(); // planificar el siguiente solo si está habilitado
+    }
+  }
+
+  // Método para transiciones manuales controladas
+  manualTransition(process, newState, reason) {
+    if (newState === STATES.RUNNING) {
+      // Si va a RUNNING, debe estar en READY
+      const readyIndex = this.readyQueue.findIndex(p => p.pid === process.pid);
+      if (readyIndex >= 0) {
+        this.readyQueue.splice(readyIndex, 1);
+        this.currentProcess = process;
+      }
+    } else if (newState === STATES.READY) {
+      // Si va a READY, puede venir de RUNNING o BLOCKED
+      if (this.currentProcess && this.currentProcess.pid === process.pid) {
+        this.currentProcess = null;
+      }
+      const blockedIndex = this.blockedQueue.findIndex(p => p.pid === process.pid);
+      if (blockedIndex >= 0) {
+        this.blockedQueue.splice(blockedIndex, 1);
+      }
+      if (!this.readyQueue.find(p => p.pid === process.pid)) {
+        this.readyQueue.push(process);
+      }
+    } else if (newState === STATES.BLOCKED) {
+      // Si va a BLOCKED, puede venir de RUNNING
+      if (this.currentProcess && this.currentProcess.pid === process.pid) {
+        this.currentProcess = null;
+      }
+      if (!this.blockedQueue.find(p => p.pid === process.pid)) {
+        this.blockedQueue.push(process);
+      }
+    } else if (newState === STATES.TERMINATED) {
+      // Si termina, remover de todas las colas
+      if (this.currentProcess && this.currentProcess.pid === process.pid) {
+        this.currentProcess = null;
+      }
+      const readyIndex = this.readyQueue.findIndex(p => p.pid === process.pid);
+      if (readyIndex >= 0) {
+        this.readyQueue.splice(readyIndex, 1);
+      }
+      const blockedIndex = this.blockedQueue.findIndex(p => p.pid === process.pid);
+      if (blockedIndex >= 0) {
+        this.blockedQueue.splice(blockedIndex, 1);
+      }
+    }
   }
 }

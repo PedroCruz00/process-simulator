@@ -11,6 +11,7 @@
     "build:css": "tailwindcss -i ./src/input.css -o ./dist/output.css --watch"
   },
   "dependencies": {
+    "framer-motion": "^12.23.12",
     "lucide-react": "^0.541.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"

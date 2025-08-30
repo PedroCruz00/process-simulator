@@ -15,6 +15,7 @@ import { STATES, VALID_TRANSITIONS } from "./constants/states";
 import { STATE_COLORS } from "./constants/colors";
 import StateNode from "./components/StateNode";
 import TransitionArrow, { StaticTransitionArrows } from "./components/TransitionArrow";
+import ProcessAnimation, { ProcessAnimations } from "./components/ProcessAnimation";
 import ProcessInfo from "./components/ProcessInfo";
 import Notification from "./components/Notification";
 
@@ -28,6 +29,7 @@ const ProcessLifecycleSimulator = () => {
   const [showDetails, setShowDetails] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [animatingTransition, setAnimatingTransition] = useState(null);
+  const [processAnimations, setProcessAnimations] = useState([]);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [logs, setLogs] = useState([]);
   const [showAllLogs, setShowAllLogs] = useState(false);
@@ -39,15 +41,30 @@ const ProcessLifecycleSimulator = () => {
     const newProcess = new Process(nextPID);
     // Conectar listener de transición para logging y animación centralizada
     newProcess.onTransition = ({ pid, from, to, reason, timestamp }) => {
-      setAnimatingTransition({
+      // LIMPIAR cualquier animación previa del mismo proceso
+      setProcessAnimations(prev => 
+        prev.filter(anim => anim.processId !== pid)
+      );
+      
+      // Agregar animación de proceso móvil con ID único
+      const newAnimation = {
+        id: crypto.randomUUID(), // ID único para cada animación
         processId: pid,
         fromState: from,
         toState: to,
-        timestamp,
+        timestamp: new Date(),
+        durationMs: animationDurationMs,
         reason: reason || "Transición automática"
-      });
-
-      setTimeout(() => setAnimatingTransition(null), animationDurationMs);
+      };
+      
+      setProcessAnimations(prev => [...prev, newAnimation]);
+      
+      // Limpiar animación después de completarse
+      setTimeout(() => {
+        setProcessAnimations(prev => 
+          prev.filter(anim => anim.id !== newAnimation.id)
+        );
+      }, animationDurationMs + 500); // +500ms de margen
 
       logTransition(pid, from, to, reason || "", "sistema");
       playSound("transition");
@@ -153,13 +170,23 @@ const ProcessLifecycleSimulator = () => {
               throw new Error(`Transición inválida: ${p.state} → ${newState}`);
             }
 
-            setAnimatingTransition({
+            // LIMPIAR cualquier animación previa del mismo proceso
+            setProcessAnimations(prev => 
+              prev.filter(anim => anim.processId !== processId)
+            );
+
+            // Agregar animación de proceso móvil con ID único
+            const newAnimation = {
+              id: crypto.randomUUID(), // ID único para cada animación
               processId: processId,
               fromState: p.state,
               toState: newState,
               timestamp: new Date(),
+              durationMs: animationDurationMs,
               reason: reason || "Transición manual"
-            });
+            };
+            
+            setProcessAnimations(prev => [...prev, newAnimation]);
 
             // Realizar la transición
             updatedProcess.transition(newState, reason);
@@ -167,13 +194,18 @@ const ProcessLifecycleSimulator = () => {
             // Actualizar las colas del procesador
             updateProcessorQueues(updatedProcess, p.state, newState);
 
+            // Limpiar animación después de completarse
+            setTimeout(() => {
+              setProcessAnimations(prev => 
+                prev.filter(anim => anim.id !== newAnimation.id)
+              );
+            }, animationDurationMs + 500); // +500ms de margen
+
             return updatedProcess;
           }
           return p;
         })
       );
-
-      setTimeout(() => setAnimatingTransition(null), animationDurationMs);
 
       playSound("transition");
       addNotification(`PID ${processId}: ${reason}`, "success");
@@ -246,42 +278,60 @@ const ProcessLifecycleSimulator = () => {
       const processor = processorRef.current;
       const updatedProcesses = [...prevProcesses];
 
-      // Admitir procesos NEW a READY
-      updatedProcesses.forEach((process) => {
-        if (process.state === STATES.NEW && Math.random() < 0.3) {
+      // DESACTIVAR completamente el scheduling automático del procesador
+      processor.setAutoScheduling(false);
+
+      // Solo hacer UNA transición por ciclo para evitar superposición
+      let transitionMade = false;
+
+      // 1. PRIORIDAD ALTA: Admitir procesos NEW a READY
+      if (!transitionMade) {
+        const newProcesses = updatedProcesses.filter(p => p.state === STATES.NEW);
+        if (newProcesses.length > 0 && Math.random() < 0.4) {
+          const processToAdmit = newProcesses[Math.floor(Math.random() * newProcesses.length)];
           try {
-            processor.admitProcess(process);
-            // La animación se maneja en el listener onTransition del proceso
+            processor.admitProcess(processToAdmit);
+            transitionMade = true;
           } catch (error) {
             console.error("Error admitiendo proceso:", error);
           }
         }
-      });
+      }
 
-      // Planificar procesos (READY → RUNNING)
-      processor.schedule();
+      // 2. PRIORIDAD MEDIA: Planificar procesos READY → RUNNING
+      if (!transitionMade && processor.readyQueue.length > 0 && !processor.currentProcess) {
+        try {
+          processor.schedule();
+          transitionMade = true;
+        } catch (error) {
+          console.error("Error planificando proceso:", error);
+        }
+      }
 
-      if (processor.currentProcess && Math.random() < 0.4) {
+      // 3. PRIORIDAD BAJA: Manejar proceso actual en RUNNING
+      if (!transitionMade && processor.currentProcess) {
         const currentProcess = processor.currentProcess;
         const randomEvent = Math.random();
 
-        if (randomEvent < 0.25) {
-          // Proceso termina
+        if (randomEvent < 0.2) {
+          // Proceso termina (20% probabilidad)
           try {
             currentProcess.transition(STATES.TERMINATED, "Auto-finalización");
             processor.currentProcess = null;
-            addNotification(`Proceso ${currentProcess.pid} terminado`, "success");
+            transitionMade = true;
           } catch (error) {
             console.error("Error terminando proceso:", error);
           }
-        } else if (randomEvent < 0.6) {
-          // Proceso va a E/S (RUNNING → BLOCKED)
+        } else if (randomEvent < 0.5) {
+          // Proceso va a E/S (30% probabilidad)
           try {
             currentProcess.transition(STATES.BLOCKED, "Auto-E/S");
             processor.blockedQueue.push(currentProcess);
             processor.currentProcess = null;
+            transitionMade = true;
 
-            // Simular que después de un tiempo vuelve a READY
+            // Simular E/S con delay más largo para que se vea la animación
+            const ioDelay = Math.random() * 4000 + 2000; // 2-6 segundos
             setTimeout(() => {
               setProcesses((processes) =>
                 processes.map((p) => {
@@ -302,65 +352,84 @@ const ProcessLifecycleSimulator = () => {
                   return p;
                 })
               );
-            }, Math.random() * 3000 + 1500); // Tiempo más realista para E/S
+            }, ioDelay);
           } catch (error) {
             console.error("Error enviando a E/S:", error);
           }
         } else {
-          // Quantum expirado (RUNNING → READY)
+          // Quantum expirado (50% probabilidad)
           try {
             currentProcess.transition(STATES.READY, "Auto-quantum expirado");
             processor.readyQueue.push(currentProcess);
             processor.currentProcess = null;
+            transitionMade = true;
           } catch (error) {
             console.error("Error con quantum:", error);
           }
         }
       }
 
-      // Algunos procesos BLOCKED vuelven a READY aleatoriamente
-      updatedProcesses.forEach((process) => {
-        if (process.state === STATES.BLOCKED && Math.random() < 0.15) {
+      // 4. PRIORIDAD MÍNIMA: Procesos BLOCKED que completan E/S
+      if (!transitionMade) {
+        const blockedProcesses = updatedProcesses.filter(p => p.state === STATES.BLOCKED);
+        if (blockedProcesses.length > 0 && Math.random() < 0.1) {
+          const processToUnblock = blockedProcesses[Math.floor(Math.random() * blockedProcesses.length)];
           try {
-            process.transition(STATES.READY, "Auto-E/S completada");
+            processToUnblock.transition(STATES.READY, "Auto-E/S completada");
             const blockedIndex = processor.blockedQueue.findIndex(
-              (p) => p.pid === process.pid
+              (p) => p.pid === processToUnblock.pid
             );
             if (blockedIndex >= 0) {
               processor.blockedQueue.splice(blockedIndex, 1);
             }
-            processor.readyQueue.push(process);
+            processor.readyQueue.push(processToUnblock);
+            transitionMade = true;
           } catch (error) {
             console.error("Error completando E/S:", error);
           }
         }
-      });
+      }
 
       return updatedProcesses;
     });
   };
 
-  // Modo automático
+  // Efecto para manejar el modo automático
   useEffect(() => {
     if (isAutoMode) {
+      // DESACTIVAR completamente el scheduling automático del procesador
+      processorRef.current.setAutoScheduling(false);
+      
       intervalRef.current = setInterval(() => {
         runAutomaticSimulation();
       }, speed);
     } else {
-      clearInterval(intervalRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      // Limpiar animaciones cuando se pausa
+      clearProcessAnimations();
     }
 
-    return () => clearInterval(intervalRef.current);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      // Limpiar animaciones al desmontar
+      clearProcessAnimations();
+    };
   }, [isAutoMode, speed]);
 
   // Ajustar duración de animaciones según velocidad
   useEffect(() => {
     // Mapeo: más lento -> animación más larga y visible
-    if (speed >= 3000) setAnimationDurationMs(2500);
-    else if (speed >= 2000) setAnimationDurationMs(2000);
-    else if (speed >= 1000) setAnimationDurationMs(1500);
-    else if (speed >= 500) setAnimationDurationMs(1200);
-    else setAnimationDurationMs(1000);
+    if (speed >= 3000) setAnimationDurationMs(4000); // Muy Lenta: 4 segundos
+    else if (speed >= 2000) setAnimationDurationMs(3500); // Lenta: 3.5 segundos
+    else if (speed >= 1000) setAnimationDurationMs(3000); // Normal: 3 segundos
+    else if (speed >= 500) setAnimationDurationMs(2500); // Rápida: 2.5 segundos
+    else setAnimationDurationMs(2000); // Muy Rápida: 2 segundos
   }, [speed]);
 
   // Generar reporte CSV
@@ -441,12 +510,18 @@ const ProcessLifecycleSimulator = () => {
     addNotification("Reporte CSV generado exitosamente", "success");
   };
 
+  // Limpiar animaciones de procesos
+  const clearProcessAnimations = () => {
+    setProcessAnimations([]);
+  };
+
   // Reiniciar simulación
   const resetSimulation = () => {
     setProcesses([]);
     setSelectedProcess(null);
     setNextPID(1);
     setIsAutoMode(false);
+    clearProcessAnimations(); // Limpiar animaciones de procesos
     processorRef.current = new Processor(); // Reiniciar el procesador
     addNotification("Simulación reiniciada", "info");
   };
@@ -722,7 +797,7 @@ const ProcessLifecycleSimulator = () => {
                   <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
                   <div className="w-6 h-6 border-2 border-white rounded-full relative z-10"></div>
                 </div>
-                <span className="text-gray-800">Diagrama de Estados</span>
+                <span className="text-gray-800">Diagrama de Estados con Procesos Móviles</span>
               </h2>
 
               {/* Contenedor del diagrama con posición relativa para las animaciones */}
@@ -785,29 +860,15 @@ const ProcessLifecycleSimulator = () => {
                 {/* Flechas de transición estáticas */}
                 <StaticTransitionArrows />
 
-                {/* Animaciones de transición */}
-                {animatingTransition && (
-                  <div className="absolute inset-0 z-40">
-                    <TransitionArrow
-                      from={animatingTransition.fromState}
-                      to={animatingTransition.toState}
-                      durationMs={animationDurationMs}
-                    />
-                  </div>
-                )}
+                {/* Animaciones de procesos móviles */}
+                <ProcessAnimations 
+                  animations={processAnimations}
+                  onAnimationComplete={(animation) => {
+                    console.log(`Animación completada: P${animation.processId} ${animation.fromState} → ${animation.toState}`);
+                  }}
+                />
 
-                {/* Indicador de proceso activo */}
-                {animatingTransition && (
-                  <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50">
-                    <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-full shadow-2xl border-2 border-white/20 flex items-center gap-3 animate-bounce">
-                      <div className="w-3 h-3 bg-yellow-300 rounded-full animate-pulse"></div>
-                      <span className="font-bold text-sm">
-                        PID {animatingTransition.processId}: {animatingTransition.fromState} → {animatingTransition.toState}
-                      </span>
-                      <div className="w-3 h-3 bg-yellow-300 rounded-full animate-pulse"></div>
-                    </div>
-                  </div>
-                )}
+
               </div>
 
               {/* Leyenda */}
@@ -835,25 +896,24 @@ const ProcessLifecycleSimulator = () => {
                 {/* Indicadores de flujo */}
                 <div className="mt-4 pt-3 border-t border-gray-200/50">
                   <div className="text-center text-xs text-gray-600 mb-2 font-medium">
-                    🔄 Flujos de Transición Activos
+                    🎯 Procesos en Movimiento
                   </div>
                   <div className="flex justify-center gap-4 text-xs">
                     <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-gray-600">Admisión</span>
+                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-gray-600">P1, P2, P3...</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                      <span className="text-gray-600">Planificación</span>
+                      <span className="text-gray-600">Partículas</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                      <span className="text-gray-600">E/S</span>
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                      <span className="text-gray-600">Trayectorias</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                      <span className="text-gray-600">Terminación</span>
                     </div>
+                  <div className="text-center text-xs text-gray-500 mt-2">
+                    Los procesos se mueven físicamente siguiendo las transiciones
                   </div>
                 </div>
               </div>
