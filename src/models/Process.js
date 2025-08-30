@@ -13,7 +13,7 @@ export class Process {
     };
     this.systemCalls = [];
 
-    // 🔹 Tiempo total de CPU necesario (aleatorio entre 3 y 10 segundos)
+    // Tiempo total de CPU necesario (entre 3 y 10 segundos)
     this.remainingTime = Math.floor(Math.random() * 7000) + 3000;
 
     this.stateHistory = [
@@ -24,7 +24,7 @@ export class Process {
       },
     ];
     this.stateStartTime = new Date();
-    // Callback opcional asignado externamente para escuchar transiciones
+    // Callback para escuchar transiciones
     this.onTransition = null;
   }
 
@@ -47,7 +47,7 @@ export class Process {
       timeInPreviousState: timeInCurrentState,
     });
 
-    // 🔹 Registro de llamadas al sistema
+    // Registrar llamadas al sistema
     if (newState === STATES.RUNNING) {
       this.systemCalls.push(`exec() - ${now.toLocaleTimeString()}`);
     } else if (newState === STATES.BLOCKED) {
@@ -65,7 +65,7 @@ export class Process {
           timestamp: now,
         });
       } catch (_) {
-        // ignorar errores del listener para no romper la simulación
+        // Ignorar errores del listener
       }
     }
   }

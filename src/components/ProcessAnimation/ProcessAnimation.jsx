@@ -22,7 +22,7 @@ const TRANSITION_COLORS = {
 
 // Componente para mostrar un proceso animado que se mueve entre estados
 export const ProcessAnimation = ({ 
-  id, // ID único para la animación
+  id,
   processId, 
   fromState, 
   toState, 
@@ -33,7 +33,6 @@ export const ProcessAnimation = ({
   const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
-    // Solo mostrar si no está completada
     if (!isCompleted) {
       setIsVisible(true);
       
@@ -49,7 +48,6 @@ export const ProcessAnimation = ({
     }
   }, [id, processId, fromState, toState, durationMs, onAnimationComplete, isCompleted]);
 
-  // No renderizar si está completada o no es visible
   if (isCompleted || !isVisible) return null;
 
   const startPosition = NODE_POSITIONS[fromState];
@@ -127,7 +125,6 @@ export const ProcessAnimation = ({
           ease: [0.25, 0.46, 0.45, 0.94],
         }}
         onAnimationComplete={() => {
-          // Efecto de llegada
           console.log(`Proceso ${processId} llegó a ${toState}`);
         }}
       >
@@ -241,7 +238,7 @@ export const ProcessAnimations = ({
       <AnimatePresence>
         {animations.map((animation) => (
           <ProcessAnimation
-            key={animation.id} // Usar el ID único de la animación
+            key={animation.id}
             id={animation.id}
             processId={animation.processId}
             fromState={animation.fromState}

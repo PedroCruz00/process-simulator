@@ -39,16 +39,17 @@ const ProcessLifecycleSimulator = () => {
   // Crear nuevo proceso
   const createProcess = () => {
     const newProcess = new Process(nextPID);
-    // Conectar listener de transición para logging y animación centralizada
+    
+    // Configurar listener para transiciones
     newProcess.onTransition = ({ pid, from, to, reason, timestamp }) => {
-      // LIMPIAR cualquier animación previa del mismo proceso
+      // Limpiar animaciones previas del mismo proceso
       setProcessAnimations(prev => 
         prev.filter(anim => anim.processId !== pid)
       );
       
-      // Agregar animación de proceso móvil con ID único
+      // Crear nueva animación
       const newAnimation = {
-        id: crypto.randomUUID(), // ID único para cada animación
+        id: crypto.randomUUID(),
         processId: pid,
         fromState: from,
         toState: to,
@@ -64,7 +65,7 @@ const ProcessLifecycleSimulator = () => {
         setProcessAnimations(prev => 
           prev.filter(anim => anim.id !== newAnimation.id)
         );
-      }, animationDurationMs + 500); // +500ms de margen
+      }, animationDurationMs + 500);
 
       logTransition(pid, from, to, reason || "", "sistema");
       playSound("transition");
@@ -87,7 +88,7 @@ const ProcessLifecycleSimulator = () => {
     ]);
   };
 
-  // Reproducir sonido
+  // Reproducir sonidos de eventos
   const playSound = (type = "transition") => {
     if (!soundEnabled) return;
 
@@ -100,7 +101,7 @@ const ProcessLifecycleSimulator = () => {
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
 
-      // Diferentes sonidos según el tipo
+      // Configurar frecuencias según el tipo de evento
       if (type === "transition") {
         oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
         oscillator.frequency.exponentialRampToValueAtTime(
@@ -154,7 +155,7 @@ const ProcessLifecycleSimulator = () => {
     addNotification("Logs limpiados", "info");
   };
 
-  // Realizar transición manual
+  // Realizar transición manual de estado
   const performTransition = (processId, newState, reason = "") => {
     try {
       setProcesses((prev) =>
@@ -165,19 +166,19 @@ const ProcessLifecycleSimulator = () => {
               p
             );
 
-            // Validar transición antes de realizarla
+            // Validar que la transición sea válida
             if (!VALID_TRANSITIONS[p.state].includes(newState)) {
               throw new Error(`Transición inválida: ${p.state} → ${newState}`);
             }
 
-            // LIMPIAR cualquier animación previa del mismo proceso
+            // Limpiar animaciones previas
             setProcessAnimations(prev => 
               prev.filter(anim => anim.processId !== processId)
             );
 
-            // Agregar animación de proceso móvil con ID único
+            // Crear nueva animación
             const newAnimation = {
-              id: crypto.randomUUID(), // ID único para cada animación
+              id: crypto.randomUUID(),
               processId: processId,
               fromState: p.state,
               toState: newState,
@@ -188,10 +189,10 @@ const ProcessLifecycleSimulator = () => {
             
             setProcessAnimations(prev => [...prev, newAnimation]);
 
-            // Realizar la transición
+            // Ejecutar la transición
             updatedProcess.transition(newState, reason);
 
-            // Actualizar las colas del procesador
+            // Actualizar colas del procesador
             updateProcessorQueues(updatedProcess, p.state, newState);
 
             // Limpiar animación después de completarse
@@ -199,7 +200,7 @@ const ProcessLifecycleSimulator = () => {
               setProcessAnimations(prev => 
                 prev.filter(anim => anim.id !== newAnimation.id)
               );
-            }, animationDurationMs + 500); // +500ms de margen
+            }, animationDurationMs + 500);
 
             return updatedProcess;
           }
@@ -215,11 +216,11 @@ const ProcessLifecycleSimulator = () => {
     }
   };
 
-  // Actualizar las colas del procesador según los cambios de estado
+  // Actualizar colas del procesador según cambios de estado
   const updateProcessorQueues = (process, oldState, newState) => {
     const processor = processorRef.current;
 
-    // Remover de las colas anteriores si es necesario
+    // Remover de colas anteriores
     if (oldState === STATES.READY) {
       const readyIndex = processor.readyQueue.findIndex(
         (p) => p.pid === process.pid
@@ -238,7 +239,7 @@ const ProcessLifecycleSimulator = () => {
       processor.currentProcess = null;
     }
 
-    // Agregar a las nuevas colas según el nuevo estado
+    // Agregar a nuevas colas
     if (
       newState === STATES.READY &&
       !processor.readyQueue.find((p) => p.pid === process.pid)
@@ -254,7 +255,7 @@ const ProcessLifecycleSimulator = () => {
     }
   };
 
-  // Añadir notificación
+  // Agregar notificación al sistema
   const addNotification = (message, type = "info", pid = null) => {
     const notification = {
       id: crypto.randomUUID(),
@@ -265,26 +266,26 @@ const ProcessLifecycleSimulator = () => {
     };
     setNotifications((prev) => [...prev, notification]);
     
-    // Auto-remove notification con tiempo variable según el tipo
+    // Auto-remover notificación
     const timeout = type === "error" ? 5000 : 3000;
     setTimeout(() => {
       setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
     }, timeout);
   };
 
-  // Función de simulación automática
+  // Simulación automática de transiciones
   const runAutomaticSimulation = () => {
     setProcesses((prevProcesses) => {
       const processor = processorRef.current;
       const updatedProcesses = [...prevProcesses];
 
-      // DESACTIVAR completamente el scheduling automático del procesador
+      // Desactivar scheduling automático del procesador
       processor.setAutoScheduling(false);
 
-      // Solo hacer UNA transición por ciclo para evitar superposición
+      // Solo hacer una transición por ciclo
       let transitionMade = false;
 
-      // 1. PRIORIDAD ALTA: Admitir procesos NEW a READY
+      // Prioridad 1: Admitir procesos nuevos
       if (!transitionMade) {
         const newProcesses = updatedProcesses.filter(p => p.state === STATES.NEW);
         if (newProcesses.length > 0 && Math.random() < 0.4) {
@@ -298,7 +299,7 @@ const ProcessLifecycleSimulator = () => {
         }
       }
 
-      // 2. PRIORIDAD MEDIA: Planificar procesos READY → RUNNING
+      // Prioridad 2: Planificar procesos listos
       if (!transitionMade && processor.readyQueue.length > 0 && !processor.currentProcess) {
         try {
           processor.schedule();
@@ -308,13 +309,13 @@ const ProcessLifecycleSimulator = () => {
         }
       }
 
-      // 3. PRIORIDAD BAJA: Manejar proceso actual en RUNNING
+      // Prioridad 3: Manejar proceso en ejecución
       if (!transitionMade && processor.currentProcess) {
         const currentProcess = processor.currentProcess;
         const randomEvent = Math.random();
 
         if (randomEvent < 0.2) {
-          // Proceso termina (20% probabilidad)
+          // Proceso termina
           try {
             currentProcess.transition(STATES.TERMINATED, "Auto-finalización");
             processor.currentProcess = null;
@@ -323,15 +324,15 @@ const ProcessLifecycleSimulator = () => {
             console.error("Error terminando proceso:", error);
           }
         } else if (randomEvent < 0.5) {
-          // Proceso va a E/S (30% probabilidad)
+          // Proceso va a E/S
           try {
             currentProcess.transition(STATES.BLOCKED, "Auto-E/S");
             processor.blockedQueue.push(currentProcess);
             processor.currentProcess = null;
             transitionMade = true;
 
-            // Simular E/S con delay más largo para que se vea la animación
-            const ioDelay = Math.random() * 4000 + 2000; // 2-6 segundos
+            // Simular E/S con delay
+            const ioDelay = Math.random() * 4000 + 2000;
             setTimeout(() => {
               setProcesses((processes) =>
                 processes.map((p) => {
@@ -357,7 +358,7 @@ const ProcessLifecycleSimulator = () => {
             console.error("Error enviando a E/S:", error);
           }
         } else {
-          // Quantum expirado (50% probabilidad)
+          // Quantum expirado
           try {
             currentProcess.transition(STATES.READY, "Auto-quantum expirado");
             processor.readyQueue.push(currentProcess);
@@ -369,7 +370,7 @@ const ProcessLifecycleSimulator = () => {
         }
       }
 
-      // 4. PRIORIDAD MÍNIMA: Procesos BLOCKED que completan E/S
+      // Prioridad 4: Procesos bloqueados que completan E/S
       if (!transitionMade) {
         const blockedProcesses = updatedProcesses.filter(p => p.state === STATES.BLOCKED);
         if (blockedProcesses.length > 0 && Math.random() < 0.1) {
@@ -394,10 +395,9 @@ const ProcessLifecycleSimulator = () => {
     });
   };
 
-  // Efecto para manejar el modo automático
+  // Manejar modo automático
   useEffect(() => {
     if (isAutoMode) {
-      // DESACTIVAR completamente el scheduling automático del procesador
       processorRef.current.setAutoScheduling(false);
       
       intervalRef.current = setInterval(() => {
@@ -408,7 +408,6 @@ const ProcessLifecycleSimulator = () => {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      // Limpiar animaciones cuando se pausa
       clearProcessAnimations();
     }
 
@@ -417,19 +416,17 @@ const ProcessLifecycleSimulator = () => {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      // Limpiar animaciones al desmontar
       clearProcessAnimations();
     };
   }, [isAutoMode, speed]);
 
   // Ajustar duración de animaciones según velocidad
   useEffect(() => {
-    // Mapeo: más lento -> animación más larga y visible
-    if (speed >= 3000) setAnimationDurationMs(4000); // Muy Lenta: 4 segundos
-    else if (speed >= 2000) setAnimationDurationMs(3500); // Lenta: 3.5 segundos
-    else if (speed >= 1000) setAnimationDurationMs(3000); // Normal: 3 segundos
-    else if (speed >= 500) setAnimationDurationMs(2500); // Rápida: 2.5 segundos
-    else setAnimationDurationMs(2000); // Muy Rápida: 2 segundos
+    if (speed >= 3000) setAnimationDurationMs(4000);
+    else if (speed >= 2000) setAnimationDurationMs(3500);
+    else if (speed >= 1000) setAnimationDurationMs(3000);
+    else if (speed >= 500) setAnimationDurationMs(2500);
+    else setAnimationDurationMs(2000);
   }, [speed]);
 
   // Generar reporte CSV
@@ -521,8 +518,8 @@ const ProcessLifecycleSimulator = () => {
     setSelectedProcess(null);
     setNextPID(1);
     setIsAutoMode(false);
-    clearProcessAnimations(); // Limpiar animaciones de procesos
-    processorRef.current = new Processor(); // Reiniciar el procesador
+    clearProcessAnimations();
+    processorRef.current = new Processor();
     addNotification("Simulación reiniciada", "info");
   };
 

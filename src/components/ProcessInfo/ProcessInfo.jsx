@@ -260,7 +260,7 @@ export const ProcessInfo = ({ process, showDetails, onTransition }) => {
         </div>
       )}
 
-      {/* Historial: solo si showDetails */}
+      {/* Historial de transiciones */}
       {showDetails && (
       <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-8 text-center border-2 border-gray-300/50 shadow-xl">
         <h4 className="text-gray-700 font-semibold text-sm mb-4 flex items-center justify-center gap-2">

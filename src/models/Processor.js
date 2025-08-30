@@ -6,7 +6,7 @@ export class Processor {
     this.readyQueue = [];
     this.blockedQueue = [];
     this.currentProcess = null;
-    this.autoScheduling = false; // Desactivar scheduling automático por defecto
+    this.autoScheduling = false;
   }
 
   admitProcess(process) {
@@ -15,21 +15,20 @@ export class Processor {
   }
 
   schedule() {
-    if (this.currentProcess) return; // ya hay uno corriendo
-    if (this.readyQueue.length === 0) return; // nada que ejecutar
+    if (this.currentProcess) return;
+    if (this.readyQueue.length === 0) return;
 
-    // Sacar el primero de la cola
+    // Tomar el primer proceso de la cola
     this.currentProcess = this.readyQueue.shift();
     this.currentProcess.transition(STATES.RUNNING, "Planificador asigna CPU");
 
-    // Solo usar scheduling automático si está habilitado
+    // Usar scheduling automático solo si está habilitado
     if (this.autoScheduling) {
-      // Simular ejecución por quantum
       setTimeout(() => this.dispatch(), this.quantum);
     }
   }
 
-  // Método para habilitar/deshabilitar scheduling automático
+  // Habilitar/deshabilitar scheduling automático
   setAutoScheduling(enabled) {
     this.autoScheduling = enabled;
   }
@@ -47,7 +46,7 @@ export class Processor {
         // E/S → bloqueado
         p.transition(STATES.BLOCKED, "Llamada a E/S");
         this.blockedQueue.push(p);
-        // simular que después de un tiempo vuelve a ready
+        // Simular que después de un tiempo vuelve a ready
         setTimeout(() => {
           const idx = this.blockedQueue.indexOf(p);
           if (idx >= 0) this.blockedQueue.splice(idx, 1);
@@ -55,7 +54,7 @@ export class Processor {
           this.readyQueue.push(p);
         }, Math.random() * 3000 + 1000);
       } else {
-        // quantum expirado → vuelve a ready
+        // Quantum expirado → vuelve a ready
         p.transition(STATES.READY, "Quantum expirado");
         this.readyQueue.push(p);
       }
@@ -63,11 +62,11 @@ export class Processor {
 
     this.currentProcess = null;
     if (this.autoScheduling) {
-      this.schedule(); // planificar el siguiente solo si está habilitado
+      this.schedule();
     }
   }
 
-  // Método para transiciones manuales controladas
+  // Transiciones manuales controladas
   manualTransition(process, newState, reason) {
     if (newState === STATES.RUNNING) {
       // Si va a RUNNING, debe estar en READY
