@@ -15,20 +15,16 @@ export class Processor {
   }
 
   schedule() {
-    if (this.currentProcess) return;
-    if (this.readyQueue.length === 0) return;
+    if (this.currentProcess || this.readyQueue.length === 0) return;
 
-    // Tomar el primer proceso de la cola
     this.currentProcess = this.readyQueue.shift();
     this.currentProcess.transition(STATES.RUNNING, "Planificador asigna CPU");
 
-    // Usar scheduling automático solo si está habilitado
     if (this.autoScheduling) {
       setTimeout(() => this.dispatch(), this.quantum);
     }
   }
 
-  // Habilitar/deshabilitar scheduling automático
   setAutoScheduling(enabled) {
     this.autoScheduling = enabled;
   }
@@ -42,11 +38,12 @@ export class Processor {
     if (p.remainingTime <= 0) {
       p.transition(STATES.TERMINATED, "Proceso finalizado");
     } else {
-      if (Math.random() < 0.3) {
-        // E/S → bloqueado
+      // Bloqueo solo si puede bloquearse
+      if (p.canBeBlocked() && Math.random() < 0.3) {
         p.transition(STATES.BLOCKED, "Llamada a E/S");
         this.blockedQueue.push(p);
-        // Simular que después de un tiempo vuelve a ready
+
+        // Simular E/S completada
         setTimeout(() => {
           const idx = this.blockedQueue.indexOf(p);
           if (idx >= 0) this.blockedQueue.splice(idx, 1);
@@ -54,60 +51,46 @@ export class Processor {
           this.readyQueue.push(p);
         }, Math.random() * 3000 + 1000);
       } else {
-        // Quantum expirado → vuelve a ready
+        // Quantum expirado
         p.transition(STATES.READY, "Quantum expirado");
         this.readyQueue.push(p);
       }
     }
 
     this.currentProcess = null;
-    if (this.autoScheduling) {
-      this.schedule();
-    }
+    if (this.autoScheduling) this.schedule();
   }
 
-  // Transiciones manuales controladas
   manualTransition(process, newState, reason) {
     if (newState === STATES.RUNNING) {
-      // Si va a RUNNING, debe estar en READY
-      const readyIndex = this.readyQueue.findIndex(p => p.pid === process.pid);
+      const readyIndex = this.readyQueue.findIndex(
+        (p) => p.pid === process.pid
+      );
       if (readyIndex >= 0) {
         this.readyQueue.splice(readyIndex, 1);
         this.currentProcess = process;
       }
     } else if (newState === STATES.READY) {
-      // Si va a READY, puede venir de RUNNING o BLOCKED
-      if (this.currentProcess && this.currentProcess.pid === process.pid) {
-        this.currentProcess = null;
-      }
-      const blockedIndex = this.blockedQueue.findIndex(p => p.pid === process.pid);
-      if (blockedIndex >= 0) {
-        this.blockedQueue.splice(blockedIndex, 1);
-      }
-      if (!this.readyQueue.find(p => p.pid === process.pid)) {
+      if (this.currentProcess?.pid === process.pid) this.currentProcess = null;
+      this.blockedQueue = this.blockedQueue.filter(
+        (p) => p.pid !== process.pid
+      );
+      if (!this.readyQueue.find((p) => p.pid === process.pid)) {
         this.readyQueue.push(process);
       }
     } else if (newState === STATES.BLOCKED) {
-      // Si va a BLOCKED, puede venir de RUNNING
-      if (this.currentProcess && this.currentProcess.pid === process.pid) {
-        this.currentProcess = null;
-      }
-      if (!this.blockedQueue.find(p => p.pid === process.pid)) {
+      if (this.currentProcess?.pid === process.pid) this.currentProcess = null;
+      if (!this.blockedQueue.find((p) => p.pid === process.pid)) {
         this.blockedQueue.push(process);
       }
     } else if (newState === STATES.TERMINATED) {
-      // Si termina, remover de todas las colas
-      if (this.currentProcess && this.currentProcess.pid === process.pid) {
-        this.currentProcess = null;
-      }
-      const readyIndex = this.readyQueue.findIndex(p => p.pid === process.pid);
-      if (readyIndex >= 0) {
-        this.readyQueue.splice(readyIndex, 1);
-      }
-      const blockedIndex = this.blockedQueue.findIndex(p => p.pid === process.pid);
-      if (blockedIndex >= 0) {
-        this.blockedQueue.splice(blockedIndex, 1);
-      }
+      if (this.currentProcess?.pid === process.pid) this.currentProcess = null;
+      this.readyQueue = this.readyQueue.filter((p) => p.pid !== process.pid);
+      this.blockedQueue = this.blockedQueue.filter(
+        (p) => p.pid !== process.pid
+      );
     }
+
+    process.transition(newState, reason);
   }
 }
