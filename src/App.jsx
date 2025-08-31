@@ -23,6 +23,7 @@ import ProcessAnimation, {
 import ProcessInfo from "./components/ProcessInfo";
 import Notification from "./components/Notification";
 import ControlPanel from "./components/controlPanel/ControlPanel";
+import ManualProcessMode from "./components/ManualProcessMode";
 
 const ProcessLifecycleSimulator = () => {
   const [processes, setProcesses] = useState([]);
@@ -41,6 +42,7 @@ const ProcessLifecycleSimulator = () => {
   const intervalRef = useRef(null);
   const processorRef = useRef(new Processor());
   const [isBlocked, setIsBlocked] = useState(false);
+  const [showManualMode, setShowManualMode] = useState(false);
 
   // Crear nuevo proceso
   const createProcess = (shouldBlock = false) => {
@@ -495,6 +497,12 @@ const ProcessLifecycleSimulator = () => {
     addNotification("Simulación reiniciada", "info");
   };
 
+  // Manejar transición manual
+  const handleManualTransition = (processId, newState, reason) => {
+    addNotification(`Transición manual: ${reason}`, "success");
+    logTransition(processId, "manual", newState, reason, "manual");
+  };
+
   // Obtener estadísticas generales
   const getGeneralStats = () => {
     const stats = {
@@ -581,6 +589,7 @@ const ProcessLifecycleSimulator = () => {
             generateReport={generateReport}
             isBlocked={isBlocked}
             setIsBlocked={setIsBlocked}
+            onOpenManualMode={() => setShowManualMode(true)}
           />
 
           {/* Diagrama de Estados */}
@@ -813,6 +822,16 @@ const ProcessLifecycleSimulator = () => {
             </div>
           </div>
         )}
+
+        {/* Modal de Modo Manual */}
+        <ManualProcessMode
+          isOpen={showManualMode}
+          onClose={() => setShowManualMode(false)}
+          processes={processes}
+          onProcessTransition={handleManualTransition}
+          createProcess={createProcess}
+          nextPID={nextPID}
+        />
       </div>
     </div>
   );

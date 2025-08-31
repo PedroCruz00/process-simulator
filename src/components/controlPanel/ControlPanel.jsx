@@ -25,6 +25,7 @@ const ControlPanel = ({
   generateReport,
   isBlocked,
   setIsBlocked,
+  onOpenManualMode,
 }) => {
   return (
     <div className="lg:col-span-3 bg-white/95 backdrop-blur-xl rounded-3xl p-6 border-2 border-blue-200/40 shadow-2xl hover:shadow-3xl transition-all duration-300 relative overflow-hidden">
@@ -94,6 +95,19 @@ const ControlPanel = ({
               <span>Reset</span>
             </button>
           </div>
+
+          {/* Botón para modo manual */}
+          <button
+            onClick={onOpenManualMode}
+            className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white py-3 px-4 rounded-xl font-semibold text-base transition-all duration-300 flex items-center justify-center gap-3 transform hover:scale-105 shadow-lg hover:shadow-xl"
+          >
+            <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M7 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 2zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 14z"/>
+              </svg>
+            </div>
+            <span>🖱️ Modo Manual</span>
+          </button>
         </div>
 
         {/* Velocidad */}

@@ -7,6 +7,8 @@ export const StateNode = ({
   processes,
   onProcessClick,
   animatingTransition,
+  isManualMode = false,
+  onDragStart,
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -110,13 +112,19 @@ export const StateNode = ({
             <div className="max-h-32 overflow-y-auto space-y-1">
               {processes.map((p) => (
                 <div
-                  key={p.pid}
+                  key={p.pid || p.id}
                   onClick={() => onProcessClick(p)}
-                  className="text-gray-600 text-sm py-2 px-3 hover:bg-blue-50 rounded-lg cursor-pointer flex items-center justify-between gap-2 transition-all duration-200 border border-transparent hover:border-blue-200 hover:shadow-sm"
+                  draggable={isManualMode}
+                  onDragStart={(e) => isManualMode && onDragStart && onDragStart(e, p)}
+                  className={`text-gray-600 text-sm py-2 px-3 hover:bg-blue-50 rounded-lg cursor-pointer flex items-center justify-between gap-2 transition-all duration-200 border border-transparent hover:border-blue-200 hover:shadow-sm ${
+                    isManualMode ? 'cursor-grab active:cursor-grabbing' : ''
+                  }`}
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="font-medium">PID {p.pid}</span>
+                    <span className="font-medium">
+                      {isManualMode ? p.name : `PID ${p.pid}`}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     {state === STATES.BLOCKED && (
@@ -125,9 +133,17 @@ export const StateNode = ({
                     {state === STATES.RUNNING && (
                       <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
                     )}
-                    <span className="text-xs text-gray-400 font-mono">
-                      {Math.floor(p.getTimeInCurrentState() / 1000)}s
-                    </span>
+                                         {isManualMode ? (
+                       <div className="w-4 h-4 text-gray-400">
+                         <svg fill="currentColor" viewBox="0 0 20 20">
+                           <path d="M7 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 2zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 14z"/>
+                         </svg>
+                       </div>
+                     ) : (
+                       <span className="text-xs text-gray-400 font-mono">
+                         {p.getTimeInCurrentState ? Math.floor(p.getTimeInCurrentState() / 1000) : 0}s
+                       </span>
+                     )}
                   </div>
                 </div>
               ))}
@@ -158,12 +174,12 @@ export const StateNode = ({
             {processes.length > 0 && (
               <div className="mt-2 pt-2 border-t border-gray-600">
                 <div className="text-gray-300 text-xs mb-1">Procesos:</div>
-                {processes.slice(0, 3).map((p) => (
-                  <div key={p.pid} className="text-xs text-blue-200 flex justify-between">
-                    <span>PID {p.pid}</span>
-                    <span>{Math.floor(p.getTimeInCurrentState() / 1000)}s</span>
-                  </div>
-                ))}
+                                 {processes.slice(0, 3).map((p) => (
+                   <div key={p.pid || p.id} className="text-xs text-blue-200 flex justify-between">
+                     <span>{isManualMode ? p.name : `PID ${p.pid}`}</span>
+                     <span>{p.getTimeInCurrentState ? Math.floor(p.getTimeInCurrentState() / 1000) : 0}s</span>
+                   </div>
+                 ))}
                 {processes.length > 3 && (
                   <div className="text-xs text-gray-400">
                     +{processes.length - 3} más
@@ -177,7 +193,7 @@ export const StateNode = ({
       </div>
 
       {/* Estilos CSS para las animaciones */}
-      <style jsx>{`
+      <style>{`
         @keyframes pulseOut {
           0% { transform: scale(1); }
           50% { transform: scale(1.15); }
