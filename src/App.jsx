@@ -72,27 +72,90 @@ const ProcessLifecycleSimulator = () => {
         );
       }, animationDurationMs + 500);
 
-      logTransition(pid, from, to, reason || "", "sistema");
+      // Solo loggear transiciones que no sean parte de la creación como bloqueado
+      if (!(reason === "Admisión para proceso bloqueado" || reason === "Asignación para bloqueo" || reason === "Creación manual como bloqueado")) {
+        logTransition(pid, from, to, reason || "", "sistema");
+      }
       playSound("transition");
     };
 
     setProcesses((prev) => [...prev, newProcess]);
     setNextPID((prev) => prev + 1);
 
-    addNotification(`Proceso ${nextPID} creado`, "success");
+    // Si se debe crear como bloqueado, hacer las transiciones necesarias
+    if (shouldBlock) {
+      // Para crear como bloqueado, necesitamos seguir el flujo: NEW → READY → RUNNING → BLOCKED
+      newProcess.transition(STATES.READY, "Admisión para proceso bloqueado");
+      
+      // Luego hacer la transición READY → RUNNING
+      setTimeout(() => {
+        processorRef.current.manualTransition(newProcess, STATES.RUNNING, "Asignación para bloqueo");
+        
+        // Actualizar el estado después de la transición a RUNNING
+        setProcesses(prev => prev.map(p => 
+          p.pid === newProcess.pid ? newProcess : p
+        ));
+        
+        // Finalmente hacer la transición RUNNING → BLOCKED
+        setTimeout(() => {
+          processorRef.current.manualTransition(newProcess, STATES.BLOCKED, "Creación manual como bloqueado");
+          
+          // Actualizar el estado en la lista de procesos
+          setProcesses(prev => prev.map(p => 
+            p.pid === newProcess.pid ? newProcess : p
+          ));
+        }, 100);
+      }, 100);
+      
+      addNotification(`Proceso ${nextPID} creado como bloqueado`, "success");
+      
+      // Log específico para creación como bloqueado
+      setLogs((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          pid: nextPID,
+          from: STATES.NEW,
+          to: STATES.READY,
+          reason: "Admisión para proceso bloqueado",
+          source: "usuario",
+          timestamp: new Date(),
+        },
+        {
+          id: crypto.randomUUID(),
+          pid: nextPID,
+          from: STATES.READY,
+          to: STATES.RUNNING,
+          reason: "Asignación para bloqueo",
+          source: "usuario",
+          timestamp: new Date(),
+        },
+        {
+          id: crypto.randomUUID(),
+          pid: nextPID,
+          from: STATES.RUNNING,
+          to: STATES.BLOCKED,
+          reason: "Creación manual como bloqueado",
+          source: "usuario",
+          timestamp: new Date(),
+        },
+      ]);
+    } else {
+      addNotification(`Proceso ${nextPID} creado`, "success");
 
-    setLogs((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        pid: nextPID,
-        from: STATES.NEW,
-        to: STATES.NEW,
-        reason: "Creación de proceso",
-        source: "usuario",
-        timestamp: new Date(),
-      },
-    ]);
+      setLogs((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          pid: nextPID,
+          from: STATES.NEW,
+          to: STATES.NEW,
+          reason: "Creación de proceso",
+          source: "usuario",
+          timestamp: new Date(),
+        },
+      ]);
+    }
   };
 
   // Reproducir sonidos de eventos
@@ -362,6 +425,40 @@ const ProcessLifecycleSimulator = () => {
         }
       }
 
+      // 4️⃣ Liberar procesos bloqueados (incluyendo los creados manualmente como bloqueados)
+      if (!transitionMade && processor.blockedQueue.length > 0) {
+        const blockedProcesses = processor.blockedQueue.filter(p => 
+          updated.find(proc => proc.pid === p.pid && proc.state === STATES.BLOCKED)
+        );
+        
+        if (blockedProcesses.length > 0 && Math.random() < 0.3) {
+          const p = blockedProcesses[Math.floor(Math.random() * blockedProcesses.length)];
+          try {
+            // Liberar el proceso bloqueado a READY
+            processor.manualTransition(p, STATES.READY, "E/S completada automáticamente");
+            transitionMade = true;
+            
+            // Si no hay proceso en ejecución, planificar inmediatamente
+            if (!processor.currentProcess && processor.readyQueue.length > 0) {
+              setTimeout(() => {
+                try {
+                  processor.schedule();
+                } catch (err) {
+                  console.error("Error planificando proceso liberado:", err);
+                }
+              }, 200);
+            }
+            
+            // Actualizar el estado en la lista de procesos
+            setProcesses(prev => prev.map(proc => 
+              proc.pid === p.pid ? p : proc
+            ));
+          } catch (err) {
+            console.error("Error liberando proceso bloqueado:", err);
+          }
+        }
+      }
+
       return updated;
     });
   };
@@ -603,7 +700,7 @@ const ProcessLifecycleSimulator = () => {
                   <div className="w-6 h-6 border-2 border-white rounded-full relative z-10"></div>
                 </div>
                 <span className="text-gray-800">
-                  Diagrama de Estados con Procesos Móviles
+                  Diagrama de Estados
                 </span>
               </h2>
 

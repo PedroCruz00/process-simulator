@@ -62,34 +62,27 @@ export class Processor {
   }
 
   manualTransition(process, newState, reason) {
+    // Remover el proceso de todas las colas primero
+    this.readyQueue = this.readyQueue.filter((p) => p.pid !== process.pid);
+    this.blockedQueue = this.blockedQueue.filter((p) => p.pid !== process.pid);
+    
+    if (this.currentProcess?.pid === process.pid) {
+      this.currentProcess = null;
+    }
+
+    // Agregar a la cola correspondiente según el nuevo estado
     if (newState === STATES.RUNNING) {
-      const readyIndex = this.readyQueue.findIndex(
-        (p) => p.pid === process.pid
-      );
-      if (readyIndex >= 0) {
-        this.readyQueue.splice(readyIndex, 1);
-        this.currentProcess = process;
-      }
+      this.currentProcess = process;
     } else if (newState === STATES.READY) {
-      if (this.currentProcess?.pid === process.pid) this.currentProcess = null;
-      this.blockedQueue = this.blockedQueue.filter(
-        (p) => p.pid !== process.pid
-      );
       if (!this.readyQueue.find((p) => p.pid === process.pid)) {
         this.readyQueue.push(process);
       }
     } else if (newState === STATES.BLOCKED) {
-      if (this.currentProcess?.pid === process.pid) this.currentProcess = null;
       if (!this.blockedQueue.find((p) => p.pid === process.pid)) {
         this.blockedQueue.push(process);
       }
-    } else if (newState === STATES.TERMINATED) {
-      if (this.currentProcess?.pid === process.pid) this.currentProcess = null;
-      this.readyQueue = this.readyQueue.filter((p) => p.pid !== process.pid);
-      this.blockedQueue = this.blockedQueue.filter(
-        (p) => p.pid !== process.pid
-      );
     }
+    // Para TERMINATED no se agrega a ninguna cola
 
     process.transition(newState, reason);
   }
