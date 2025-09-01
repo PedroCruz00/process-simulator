@@ -73,12 +73,14 @@ const ProcessLifecycleSimulator = () => {
       }, animationDurationMs + 500);
 
       logTransition(pid, from, to, reason || "", "sistema");
-      playSound("transition");
+      // No reproducir sonido para transiciones automáticas
     };
 
     setProcesses((prev) => [...prev, newProcess]);
     setNextPID((prev) => prev + 1);
 
+    // Reproducir sonido cuando se crea un proceso
+    playSound("create_process");
     addNotification(`Proceso ${nextPID} creado`, "success");
 
     setLogs((prev) => [
@@ -96,7 +98,7 @@ const ProcessLifecycleSimulator = () => {
   };
 
   // Reproducir sonidos de eventos
-  const playSound = (type = "transition") => {
+  const playSound = (type = "transition", isManualMode = false) => {
     if (!soundEnabled) return;
 
     try {
@@ -109,19 +111,57 @@ const ProcessLifecycleSimulator = () => {
       gainNode.connect(audioContext.destination);
 
       // Configurar frecuencias según el tipo de evento
-      if (type === "transition") {
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      if (type === "create_process") {
+        // Sonido para crear proceso - tono ascendente alegre
+        oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
         oscillator.frequency.exponentialRampToValueAtTime(
-          1200,
+          800,
+          audioContext.currentTime + 0.15
+        );
+      } else if (type === "process_terminated") {
+        // Sonido para proceso terminado - tono descendente final
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          200,
+          audioContext.currentTime + 0.3
+        );
+      } else if (type === "clear_logs") {
+        // Sonido para limpiar logs - tono corto y limpio
+        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          500,
+          audioContext.currentTime + 0.1
+        );
+      } else if (type === "reset_simulation") {
+        // Sonido para reset - tono de reinicio
+        oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          150,
+          audioContext.currentTime + 0.2
+        );
+      } else if (type === "start_auto_simulation") {
+        // Sonido para iniciar simulación automática - tono de inicio
+        oscillator.frequency.setValueAtTime(500, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          1000,
+          audioContext.currentTime + 0.25
+        );
+      } else if (type === "manual_transition") {
+        // Sonido para transiciones manuales - tono de control
+        oscillator.frequency.setValueAtTime(700, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          900,
           audioContext.currentTime + 0.1
         );
       } else if (type === "error") {
+        // Sonido de error - tono bajo y grave
         oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
         oscillator.frequency.exponentialRampToValueAtTime(
           100,
           audioContext.currentTime + 0.2
         );
       } else if (type === "success") {
+        // Sonido de éxito - tono alto y brillante
         oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
         oscillator.frequency.exponentialRampToValueAtTime(
           1500,
@@ -159,6 +199,7 @@ const ProcessLifecycleSimulator = () => {
 
   const clearLogs = () => {
     setLogs([]);
+    playSound("clear_logs");
     addNotification("Logs limpiados", "info");
   };
 
@@ -212,7 +253,7 @@ const ProcessLifecycleSimulator = () => {
         })
       );
 
-      playSound("transition");
+      playSound("manual_transition");
       addNotification(`PID ${processId}: ${reason}`, "success");
     } catch (error) {
       playSound("error");
@@ -324,6 +365,8 @@ const ProcessLifecycleSimulator = () => {
           );
           processor.currentProcess = null;
           transitionMade = true;
+          // Reproducir sonido cuando un proceso termina en modo automático
+          playSound("process_terminated");
         } else if (rand < 0.5 && p.canBeBlocked()) {
           // Bloqueo
           processor.manualTransition(p, STATES.BLOCKED, "Solicitud de E/S");
@@ -490,6 +533,7 @@ const ProcessLifecycleSimulator = () => {
     setIsAutoMode(false);
     clearProcessAnimations();
     processorRef.current = new Processor();
+    playSound("reset_simulation");
     addNotification("Simulación reiniciada", "info");
   };
 
@@ -508,6 +552,17 @@ const ProcessLifecycleSimulator = () => {
 
   const closeManualControl = () => {
     setIsManualControlOpen(false);
+  };
+
+  // Manejar cambio de modo automático con sonido
+  const handleToggleAutoMode = () => {
+    const newMode = !isAutoMode;
+    setIsAutoMode(newMode);
+    
+    // Reproducir sonido solo cuando se activa el modo automático
+    if (newMode) {
+      playSound("start_auto_simulation");
+    }
   };
 
   // Obtener estadísticas generales
@@ -597,6 +652,7 @@ const ProcessLifecycleSimulator = () => {
             isBlocked={isBlocked}
             setIsBlocked={setIsBlocked}
             onOpenManualControl={openManualControl}
+            onToggleAutoMode={handleToggleAutoMode}
           />
 
           {/* Diagrama de Estados */}

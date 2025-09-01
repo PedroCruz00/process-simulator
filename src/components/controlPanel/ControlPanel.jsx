@@ -27,6 +27,7 @@ const ControlPanel = ({
   isBlocked,
   setIsBlocked,
   onOpenManualControl,
+  onToggleAutoMode,
 }) => {
   return (
     <div className="lg:col-span-3 bg-white/95 backdrop-blur-xl rounded-3xl p-6 border-2 border-blue-200/40 shadow-2xl hover:shadow-3xl transition-all duration-300 relative overflow-hidden">
@@ -69,7 +70,7 @@ const ControlPanel = ({
 
           <div className="flex gap-4">
             <button
-              onClick={() => setIsAutoMode(!isAutoMode)}
+              onClick={onToggleAutoMode}
               className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transform hover:scale-105 ${
                 isAutoMode
                   ? "bg-red-500 hover:bg-red-600 text-white"
