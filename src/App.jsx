@@ -23,6 +23,7 @@ import ProcessAnimation, {
 import ProcessInfo from "./components/ProcessInfo";
 import Notification from "./components/Notification";
 import ControlPanel from "./components/controlPanel/ControlPanel";
+import ManualProcessControl from "./components/ManualProcessControl";
 
 const ProcessLifecycleSimulator = () => {
   const [processes, setProcesses] = useState([]);
@@ -41,6 +42,7 @@ const ProcessLifecycleSimulator = () => {
   const intervalRef = useRef(null);
   const processorRef = useRef(new Processor());
   const [isBlocked, setIsBlocked] = useState(false);
+  const [isManualControlOpen, setIsManualControlOpen] = useState(false);
 
   // Crear nuevo proceso
   const createProcess = (shouldBlock = false) => {
@@ -160,7 +162,6 @@ const ProcessLifecycleSimulator = () => {
     addNotification("Logs limpiados", "info");
   };
 
-  // Realizar transición manual de estado
   // Realizar transición manual de estado
   const performTransition = (processId, newState, reason = "") => {
     try {
@@ -492,6 +493,23 @@ const ProcessLifecycleSimulator = () => {
     addNotification("Simulación reiniciada", "info");
   };
 
+  // Funciones para control manual
+  const handleManualTransition = (processId, newState, reason = "") => {
+    performTransition(processId, newState, reason);
+  };
+
+  const handleManualCreateProcess = () => {
+    createProcess(false); // Crear proceso normal en modo manual
+  };
+
+  const openManualControl = () => {
+    setIsManualControlOpen(true);
+  };
+
+  const closeManualControl = () => {
+    setIsManualControlOpen(false);
+  };
+
   // Obtener estadísticas generales
   const getGeneralStats = () => {
     const stats = {
@@ -578,6 +596,7 @@ const ProcessLifecycleSimulator = () => {
             generateReport={generateReport}
             isBlocked={isBlocked}
             setIsBlocked={setIsBlocked}
+            onOpenManualControl={openManualControl}
           />
 
           {/* Diagrama de Estados */}
@@ -810,6 +829,16 @@ const ProcessLifecycleSimulator = () => {
             </div>
           </div>
         )}
+
+        {/* Componente de Control Manual */}
+        <ManualProcessControl
+          isOpen={isManualControlOpen}
+          onClose={closeManualControl}
+          processes={processes}
+          onManualTransition={handleManualTransition}
+          onManualCreateProcess={handleManualCreateProcess}
+          logs={logs}
+        />
       </div>
     </div>
   );

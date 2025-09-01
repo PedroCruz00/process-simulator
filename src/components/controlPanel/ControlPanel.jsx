@@ -7,6 +7,7 @@ import {
   Settings,
   Info,
   Download,
+  Hand,
 } from "lucide-react";
 
 const ControlPanel = ({
@@ -25,6 +26,7 @@ const ControlPanel = ({
   generateReport,
   isBlocked,
   setIsBlocked,
+  onOpenManualControl,
 }) => {
   return (
     <div className="lg:col-span-3 bg-white/95 backdrop-blur-xl rounded-3xl p-6 border-2 border-blue-200/40 shadow-2xl hover:shadow-3xl transition-all duration-300 relative overflow-hidden">
@@ -94,6 +96,17 @@ const ControlPanel = ({
               <span>Reset</span>
             </button>
           </div>
+
+          {/* Botón de Control Manual */}
+          <button
+            onClick={onOpenManualControl}
+            className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white py-3 px-4 rounded-xl font-semibold text-base transition-all duration-300 flex items-center justify-center gap-3 transform hover:scale-105 shadow-lg hover:shadow-xl"
+          >
+            <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
+              <Hand className="w-3 h-3" />
+            </div>
+            <span>Control Manual</span>
+          </button>
         </div>
 
         {/* Velocidad */}
