@@ -62,35 +62,36 @@ export class Processor {
   }
 
   manualTransition(process, newState, reason) {
-    if (newState === STATES.RUNNING) {
-      const readyIndex = this.readyQueue.findIndex(
-        (p) => p.pid === process.pid
-      );
-      if (readyIndex >= 0) {
-        this.readyQueue.splice(readyIndex, 1);
-        this.currentProcess = process;
-      }
-    } else if (newState === STATES.READY) {
-      if (this.currentProcess?.pid === process.pid) this.currentProcess = null;
+    const oldState = process.state;
+
+    // Remover de colas anteriores
+    if (oldState === STATES.READY) {
+      this.readyQueue = this.readyQueue.filter((p) => p.pid !== process.pid);
+    } else if (oldState === STATES.BLOCKED) {
       this.blockedQueue = this.blockedQueue.filter(
         (p) => p.pid !== process.pid
       );
+    } else if (
+      oldState === STATES.RUNNING &&
+      this.currentProcess?.pid === process.pid
+    ) {
+      this.currentProcess = null;
+    }
+
+    // Ejecutar la transición
+    process.transition(newState, reason);
+
+    // Agregar a nuevas colas
+    if (newState === STATES.READY) {
       if (!this.readyQueue.find((p) => p.pid === process.pid)) {
         this.readyQueue.push(process);
       }
     } else if (newState === STATES.BLOCKED) {
-      if (this.currentProcess?.pid === process.pid) this.currentProcess = null;
       if (!this.blockedQueue.find((p) => p.pid === process.pid)) {
         this.blockedQueue.push(process);
       }
-    } else if (newState === STATES.TERMINATED) {
-      if (this.currentProcess?.pid === process.pid) this.currentProcess = null;
-      this.readyQueue = this.readyQueue.filter((p) => p.pid !== process.pid);
-      this.blockedQueue = this.blockedQueue.filter(
-        (p) => p.pid !== process.pid
-      );
+    } else if (newState === STATES.RUNNING) {
+      this.currentProcess = process;
     }
-
-    process.transition(newState, reason);
   }
 }

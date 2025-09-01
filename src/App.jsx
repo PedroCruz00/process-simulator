@@ -161,6 +161,7 @@ const ProcessLifecycleSimulator = () => {
   };
 
   // Realizar transición manual de estado
+  // Realizar transición manual de estado
   const performTransition = (processId, newState, reason = "") => {
     try {
       setProcesses((prev) =>
@@ -176,16 +177,20 @@ const ProcessLifecycleSimulator = () => {
               throw new Error(`Transición inválida: ${p.state} → ${newState}`);
             }
 
-            // Limpiar animaciones previas
-            setProcessAnimations((prev) =>
-              prev.filter((anim) => anim.processId !== processId)
+            const oldState = p.state;
+
+            // **CORRECCIÓN PRINCIPAL: Usar el procesador**
+            processorRef.current.manualTransition(
+              updatedProcess,
+              newState,
+              reason
             );
 
-            // Crear nueva animación
+            // Crear animación
             const newAnimation = {
               id: crypto.randomUUID(),
               processId: processId,
-              fromState: p.state,
+              fromState: oldState,
               toState: newState,
               timestamp: new Date(),
               durationMs: animationDurationMs,
@@ -194,13 +199,6 @@ const ProcessLifecycleSimulator = () => {
 
             setProcessAnimations((prev) => [...prev, newAnimation]);
 
-            // Ejecutar la transición
-            updatedProcess.transition(newState, reason);
-
-            // Actualizar colas del procesador
-            updateProcessorQueues(updatedProcess, p.state, newState);
-
-            // Limpiar animación después de completarse
             setTimeout(() => {
               setProcessAnimations((prev) =>
                 prev.filter((anim) => anim.id !== newAnimation.id)
@@ -220,7 +218,6 @@ const ProcessLifecycleSimulator = () => {
       addNotification(error.message, "error");
     }
   };
-
   // Actualizar colas del procesador según cambios de estado
   const updateProcessorQueues = (process, oldState, newState) => {
     const processor = processorRef.current;

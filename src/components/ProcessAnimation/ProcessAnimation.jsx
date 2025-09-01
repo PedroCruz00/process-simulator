@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { HardDrive, Keyboard, Printer, Wifi, Database } from "lucide-react";
 
 // Posiciones de los nodos (en % del contenedor)
 const NODE_POSITIONS = {
@@ -20,22 +21,42 @@ const TRANSITION_COLORS = {
   "Running->Terminated": "#ef4444",
 };
 
+// Iconos aleatorios para operaciones de E/S
+const IO_ICONS = [
+  { icon: HardDrive, name: "Disco Duro", color: "#374151" },
+  { icon: Keyboard, name: "Teclado", color: "#1f2937" },
+  { icon: Printer, name: "Impresora", color: "#4b5563" },
+  { icon: Wifi, name: "Red", color: "#6366f1" },
+  { icon: Database, name: "Base de Datos", color: "#059669" },
+];
+
+// Función para obtener un icono aleatorio de E/S
+const getRandomIOIcon = () => {
+  return IO_ICONS[Math.floor(Math.random() * IO_ICONS.length)];
+};
+
 // Componente para mostrar un proceso animado que se mueve entre estados
-export const ProcessAnimation = ({ 
+export const ProcessAnimation = ({
   id,
-  processId, 
-  fromState, 
-  toState, 
+  processId,
+  fromState,
+  toState,
   durationMs = 1200,
-  onAnimationComplete 
+  onAnimationComplete,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [ioIcon, setIoIcon] = useState(null);
 
   useEffect(() => {
     if (!isCompleted) {
       setIsVisible(true);
-      
+
+      // Si la transición va a Blocked, seleccionar un icono de E/S aleatorio
+      if (toState === "Blocked") {
+        setIoIcon(getRandomIOIcon());
+      }
+
       const timer = setTimeout(() => {
         setIsVisible(false);
         setIsCompleted(true);
@@ -46,7 +67,15 @@ export const ProcessAnimation = ({
 
       return () => clearTimeout(timer);
     }
-  }, [id, processId, fromState, toState, durationMs, onAnimationComplete, isCompleted]);
+  }, [
+    id,
+    processId,
+    fromState,
+    toState,
+    durationMs,
+    onAnimationComplete,
+    isCompleted,
+  ]);
 
   if (isCompleted || !isVisible) return null;
 
@@ -67,22 +96,22 @@ export const ProcessAnimation = ({
     const offset = distance * 0.3;
     controlPoint1 = {
       x: startPosition.x + dx * 0.3,
-      y: startPosition.y - offset * Math.sign(dy || 1)
+      y: startPosition.y - offset * Math.sign(dy || 1),
     };
     controlPoint2 = {
       x: endPosition.x - dx * 0.3,
-      y: endPosition.y + offset * Math.sign(dy || 1)
+      y: endPosition.y + offset * Math.sign(dy || 1),
     };
   } else {
     // Transición vertical
     const offset = distance * 0.25;
     controlPoint1 = {
       x: startPosition.x + offset * Math.sign(dx || 1),
-      y: startPosition.y + dy * 0.3
+      y: startPosition.y + dy * 0.3,
     };
     controlPoint2 = {
       x: endPosition.x - offset * Math.sign(dx || 1),
-      y: endPosition.y - dy * 0.3
+      y: endPosition.y - dy * 0.3,
     };
   }
 
@@ -98,12 +127,7 @@ export const ProcessAnimation = ({
         preserveAspectRatio="none"
       >
         <defs>
-          <path
-            id={`path-${id}`}
-            d={path}
-            fill="none"
-            stroke="transparent"
-          />
+          <path id={`path-${id}`} d={path} fill="none" stroke="transparent" />
         </defs>
       </svg>
 
@@ -114,7 +138,7 @@ export const ProcessAnimation = ({
           backgroundColor: color,
           left: `${startPosition.x}%`,
           top: `${startPosition.y}%`,
-          transform: 'translate(-50%, -50%)',
+          transform: "translate(-50%, -50%)",
         }}
         animate={{
           left: `${endPosition.x}%`,
@@ -130,13 +154,13 @@ export const ProcessAnimation = ({
       >
         <motion.div
           initial={{ scale: 0.8, opacity: 0.8 }}
-          animate={{ 
-            scale: [0.8, 1.2, 1], 
-            opacity: [0.8, 1, 1] 
+          animate={{
+            scale: [0.8, 1.2, 1],
+            opacity: [0.8, 1, 1],
           }}
           transition={{
             duration: 0.3,
-            ease: "easeOut"
+            ease: "easeOut",
           }}
         >
           P{processId}
@@ -146,17 +170,78 @@ export const ProcessAnimation = ({
         <motion.div
           className="absolute inset-0 rounded-full bg-white/30"
           initial={{ scale: 0, opacity: 0 }}
-          animate={{ 
-            scale: [0, 1.5, 0], 
-            opacity: [0, 0.6, 0] 
+          animate={{
+            scale: [0, 1.5, 0],
+            opacity: [0, 0.6, 0],
           }}
           transition={{
             duration: durationMs / 1000,
             ease: "easeInOut",
-            repeat: 0
+            repeat: 0,
           }}
         />
       </motion.div>
+
+      {/* Icono de E/S cuando va a Blocked */}
+      {toState === "Blocked" && ioIcon && (
+        <motion.div
+          className="absolute flex items-center justify-center w-8 h-8 rounded-full bg-white shadow-lg border-2"
+          style={{
+            borderColor: ioIcon.color,
+            left: `${endPosition.x}%`,
+            top: `${endPosition.y - 12}%`,
+            transform: "translate(-50%, -50%)",
+          }}
+          initial={{
+            scale: 0,
+            opacity: 0,
+            rotate: -180,
+            y: 20,
+          }}
+          animate={{
+            scale: [0, 1.3, 1],
+            opacity: 1,
+            rotate: 0,
+            y: 0,
+          }}
+          transition={{
+            duration: 0.6,
+            delay: (durationMs / 1000) * 0.7,
+            ease: "backOut",
+          }}
+        >
+          <ioIcon.icon className="w-4 h-4" style={{ color: ioIcon.color }} />
+        </motion.div>
+      )}
+
+      {/* Etiqueta de dispositivo E/S */}
+      {toState === "Blocked" && ioIcon && (
+        <motion.div
+          className="absolute transform -translate-x-1/2 px-2 py-1 rounded-lg text-xs font-medium text-white shadow-md"
+          style={{
+            backgroundColor: ioIcon.color,
+            left: `${endPosition.x}%`,
+            top: `${endPosition.y - 20}%`,
+          }}
+          initial={{
+            scale: 0,
+            opacity: 0,
+            y: 10,
+          }}
+          animate={{
+            scale: 1,
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            duration: 0.4,
+            delay: (durationMs / 1000) * 0.8,
+            ease: "easeOut",
+          }}
+        >
+          {ioIcon.name}
+        </motion.div>
+      )}
 
       {/* Partículas que siguen la trayectoria */}
       <AnimatePresence>
@@ -169,10 +254,10 @@ export const ProcessAnimation = ({
               boxShadow: `0 0 8px ${color}`,
               left: `${startPosition.x}%`,
               top: `${startPosition.y}%`,
-              transform: 'translate(-50%, -50%)',
+              transform: "translate(-50%, -50%)",
             }}
-            initial={{ 
-              scale: 0, 
+            initial={{
+              scale: 0,
               opacity: 0.8,
               left: `${startPosition.x}%`,
               top: `${startPosition.y}%`,
@@ -185,7 +270,7 @@ export const ProcessAnimation = ({
             }}
             transition={{
               duration: (durationMs / 1000) * 0.8,
-              delay: (i * 0.1),
+              delay: i * 0.1,
               ease: [0.25, 0.46, 0.45, 0.94],
             }}
             exit={{ scale: 0, opacity: 0 }}
@@ -201,38 +286,36 @@ export const ProcessAnimation = ({
           left: `${(startPosition.x + endPosition.x) / 2}%`,
           top: `${(startPosition.y + endPosition.y) / 2 - 5}%`,
         }}
-        initial={{ 
-          scale: 0, 
+        initial={{
+          scale: 0,
           opacity: 0,
-          y: 10 
+          y: 10,
         }}
-        animate={{ 
-          scale: 1, 
+        animate={{
+          scale: 1,
           opacity: 1,
-          y: 0 
+          y: 0,
         }}
-        exit={{ 
-          scale: 0, 
+        exit={{
+          scale: 0,
           opacity: 0,
-          y: -10 
+          y: -10,
         }}
         transition={{
           duration: 0.3,
           delay: 0.1,
-          ease: "easeOut"
+          ease: "easeOut",
         }}
       >
         {fromState} → {toState}
+        {toState === "Blocked" && " (E/S)"}
       </motion.div>
     </div>
   );
 };
 
 // Componente para mostrar múltiples animaciones de procesos
-export const ProcessAnimations = ({ 
-  animations = [], 
-  onAnimationComplete 
-}) => {
+export const ProcessAnimations = ({ animations = [], onAnimationComplete }) => {
   return (
     <div className="absolute inset-0 pointer-events-none z-40">
       <AnimatePresence>
