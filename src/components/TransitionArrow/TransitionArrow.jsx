@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 
-// Posiciones más precisas de los nodos (en % del contenedor)
+// Posiciones de los nodos (en % del contenedor)
 const NODE_POSITIONS = {
   New: { x: 50, y: 15 },
   Ready: { x: 16, y: 50 },
@@ -9,7 +9,7 @@ const NODE_POSITIONS = {
   Terminated: { x: 50, y: 85 },
 };
 
-// Colores vibrantes para cada transición
+// Colores para cada transición
 const TRANSITION_COLORS = {
   "New->Ready": {
     stroke: "#10b981",
@@ -172,7 +172,7 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
     const dy = end.y - start.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    // Control points para diferentes tipos de transiciones
+    // Puntos de control para diferentes tipos de transiciones
     let cp1x, cp1y, cp2x, cp2y;
 
     if (Math.abs(dx) > Math.abs(dy)) {
@@ -222,7 +222,7 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
           style={{ filter: 'drop-shadow(0 0 8px rgba(0,0,0,0.3))' }}
         >
           <defs>
-            {/* Marcador de flecha más pequeño y elegante */}
+            {/* Marcador de flecha */}
             <marker
               id={`arrow-${key}`}
               markerWidth="6"
@@ -239,7 +239,7 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
               />
             </marker>
 
-            {/* Filtro de brillo más sutil */}
+            {/* Filtro de brillo */}
             <filter id={`glow-${key}`} x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur stdDeviation="1" result="coloredBlur" />
               <feMerge>
@@ -256,7 +256,7 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
             </linearGradient>
           </defs>
 
-          {/* Línea de fondo con sombra más sutil */}
+          {/* Línea de fondo con sombra */}
           <path
             d={pathData.path}
             stroke={colors.shadow}
@@ -266,7 +266,7 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
             transform="translate(0.5, 0.5)"
           />
 
-          {/* Línea principal animada más fina */}
+          {/* Línea principal animada */}
           <path
             d={pathData.path}
             stroke={`url(#gradient-${key})`}

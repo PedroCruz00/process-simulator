@@ -260,28 +260,28 @@ export const ProcessInfo = ({ process, showDetails, onTransition }) => {
         </div>
       )}
 
-      {/* Historial: solo si showDetails */}
+      {/* Historial de transiciones */}
       {showDetails && (
-      <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-8 text-center border-2 border-gray-300/50 shadow-xl">
-        <h4 className="text-gray-700 font-semibold text-sm mb-4 flex items-center justify-center gap-2">
-          <Clock className="w-4 h-4 text-blue-500" />
-          📋 Historial ({process.stateHistory.length - 1} transiciones)
-        </h4>
+        <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-8 text-center border-2 border-gray-300/50 shadow-xl">
+          <h4 className="text-gray-700 font-semibold text-sm mb-4 flex items-center justify-center gap-2">
+            <Clock className="w-4 h-4 text-blue-500" />
+            📋 Historial ({process.stateHistory.length - 1} transiciones)
+          </h4>
 
-        <div className="max-h-32 overflow-y-auto space-y-2">
-          {process.stateHistory.slice(-5).map((entry, index) => (
-            <div
-              key={index}
-              className="text-xs text-gray-600 flex justify-between items-center p-2 bg-white/60 rounded-lg border border-gray-200/30"
-            >
-              <span className="font-medium">{entry.state}</span>
-              <span className="text-gray-500 font-mono">
-                {entry.timestamp.toLocaleTimeString()}
-              </span>
-            </div>
-          ))}
+          <div className="max-h-32 overflow-y-auto space-y-2">
+            {process.stateHistory.slice(-5).map((entry, index) => (
+              <div
+                key={index}
+                className="text-xs text-gray-600 flex justify-between items-center p-2 bg-white/60 rounded-lg border border-gray-200/30"
+              >
+                <span className="font-medium">{entry.state}</span>
+                <span className="text-gray-500 font-mono">
+                  {entry.timestamp.toLocaleTimeString()}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
       )}
     </div>
   );

@@ -1,7 +1,7 @@
 import { STATES, VALID_TRANSITIONS } from "../constants/states";
 
 export class Process {
-  constructor(pid) {
+  constructor(pid, canBeBlocked = false) {
     this.pid = pid;
     this.state = STATES.NEW;
     this.priority = Math.floor(Math.random() * 10) + 1;
@@ -12,8 +12,9 @@ export class Process {
       CX: Math.floor(Math.random() * 255),
     };
     this.systemCalls = [];
+    this.canBeBlockedFlag = canBeBlocked; // ✅ más claro
 
-    // 🔹 Tiempo total de CPU necesario (aleatorio entre 3 y 10 segundos)
+    // Tiempo total de CPU necesario (aleatorio entre 3 y 10 segundos)
     this.remainingTime = Math.floor(Math.random() * 7000) + 3000;
 
     this.stateHistory = [
@@ -24,13 +25,12 @@ export class Process {
       },
     ];
     this.stateStartTime = new Date();
-    // Callback opcional asignado externamente para escuchar transiciones
-    this.onTransition = null;
+
+    this.onTransition = null; // ✅ callback definido desde App.jsx
   }
 
   transition(newState, reason = "") {
     const currentState = this.state;
-
     if (!VALID_TRANSITIONS[currentState].includes(newState)) {
       throw new Error(`Transición inválida: ${currentState} → ${newState}`);
     }
@@ -54,20 +54,20 @@ export class Process {
       this.systemCalls.push(`I/O wait - ${now.toLocaleTimeString()}`);
     }
 
-    // Notificar al listener externo
-    if (typeof this.onTransition === "function") {
-      try {
-        this.onTransition({
-          pid: this.pid,
-          from: currentState,
-          to: newState,
-          reason,
-          timestamp: now,
-        });
-      } catch (_) {
-        // ignorar errores del listener para no romper la simulación
-      }
+    // 🔹 Notificar callback a la UI
+    if (this.onTransition) {
+      this.onTransition({
+        pid: this.pid,
+        from: currentState,
+        to: newState,
+        reason,
+        timestamp: now,
+      });
     }
+  }
+
+  canBeBlocked() {
+    return this.canBeBlockedFlag;
   }
 
   getTimeInCurrentState() {

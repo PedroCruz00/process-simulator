@@ -14,9 +14,16 @@ import { Processor } from "./models/Processor";
 import { STATES, VALID_TRANSITIONS } from "./constants/states";
 import { STATE_COLORS } from "./constants/colors";
 import StateNode from "./components/StateNode";
-import TransitionArrow, { StaticTransitionArrows } from "./components/TransitionArrow";
+import TransitionArrow, {
+  StaticTransitionArrows,
+} from "./components/TransitionArrow";
+import ProcessAnimation, {
+  ProcessAnimations,
+} from "./components/ProcessAnimation";
 import ProcessInfo from "./components/ProcessInfo";
 import Notification from "./components/Notification";
+import ControlPanel from "./components/controlPanel/ControlPanel";
+import ManualProcessControl from "./components/ManualProcessControl";
 
 const ProcessLifecycleSimulator = () => {
   const [processes, setProcesses] = useState([]);
@@ -28,34 +35,54 @@ const ProcessLifecycleSimulator = () => {
   const [showDetails, setShowDetails] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [animatingTransition, setAnimatingTransition] = useState(null);
+  const [processAnimations, setProcessAnimations] = useState([]);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [logs, setLogs] = useState([]);
   const [showAllLogs, setShowAllLogs] = useState(false);
   const intervalRef = useRef(null);
   const processorRef = useRef(new Processor());
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isManualControlOpen, setIsManualControlOpen] = useState(false);
 
   // Crear nuevo proceso
-  const createProcess = () => {
-    const newProcess = new Process(nextPID);
-    // Conectar listener de transición para logging y animación centralizada
+  const createProcess = (shouldBlock = false) => {
+    const newProcess = new Process(nextPID, shouldBlock); // ✅ pasa el valor desde ControlPanel
+
+    // Configurar listener de transiciones
     newProcess.onTransition = ({ pid, from, to, reason, timestamp }) => {
-      setAnimatingTransition({
+      setProcessAnimations((prev) =>
+        prev.filter((anim) => anim.processId !== pid)
+      );
+
+      const newAnimation = {
+        id: crypto.randomUUID(),
         processId: pid,
         fromState: from,
         toState: to,
-        timestamp,
-        reason: reason || "Transición automática"
-      });
+        timestamp: new Date(),
+        durationMs: animationDurationMs,
+        reason: reason || "Transición automática",
+      };
 
-      setTimeout(() => setAnimatingTransition(null), animationDurationMs);
+      setProcessAnimations((prev) => [...prev, newAnimation]);
+
+      setTimeout(() => {
+        setProcessAnimations((prev) =>
+          prev.filter((anim) => anim.id !== newAnimation.id)
+        );
+      }, animationDurationMs + 500);
 
       logTransition(pid, from, to, reason || "", "sistema");
-      playSound("transition");
+      // No reproducir sonido para transiciones automáticas
     };
 
     setProcesses((prev) => [...prev, newProcess]);
     setNextPID((prev) => prev + 1);
+
+    // Reproducir sonido cuando se crea un proceso
+    playSound("create_process");
     addNotification(`Proceso ${nextPID} creado`, "success");
+
     setLogs((prev) => [
       ...prev,
       {
@@ -70,8 +97,8 @@ const ProcessLifecycleSimulator = () => {
     ]);
   };
 
-  // Reproducir sonido
-  const playSound = (type = "transition") => {
+  // Reproducir sonidos de eventos
+  const playSound = (type = "transition", isManualMode = false) => {
     if (!soundEnabled) return;
 
     try {
@@ -83,20 +110,58 @@ const ProcessLifecycleSimulator = () => {
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
 
-      // Diferentes sonidos según el tipo
-      if (type === "transition") {
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      // Configurar frecuencias según el tipo de evento
+      if (type === "create_process") {
+        // Sonido para crear proceso - tono ascendente alegre
+        oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
         oscillator.frequency.exponentialRampToValueAtTime(
-          1200,
+          800,
+          audioContext.currentTime + 0.15
+        );
+      } else if (type === "process_terminated") {
+        // Sonido para proceso terminado - tono descendente final
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          200,
+          audioContext.currentTime + 0.3
+        );
+      } else if (type === "clear_logs") {
+        // Sonido para limpiar logs - tono corto y limpio
+        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          500,
+          audioContext.currentTime + 0.1
+        );
+      } else if (type === "reset_simulation") {
+        // Sonido para reset - tono de reinicio
+        oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          150,
+          audioContext.currentTime + 0.2
+        );
+      } else if (type === "start_auto_simulation") {
+        // Sonido para iniciar simulación automática - tono de inicio
+        oscillator.frequency.setValueAtTime(500, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          1000,
+          audioContext.currentTime + 0.25
+        );
+      } else if (type === "manual_transition") {
+        // Sonido para transiciones manuales - tono de control
+        oscillator.frequency.setValueAtTime(700, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          900,
           audioContext.currentTime + 0.1
         );
       } else if (type === "error") {
+        // Sonido de error - tono bajo y grave
         oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
         oscillator.frequency.exponentialRampToValueAtTime(
           100,
           audioContext.currentTime + 0.2
         );
       } else if (type === "success") {
+        // Sonido de éxito - tono alto y brillante
         oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
         oscillator.frequency.exponentialRampToValueAtTime(
           1500,
@@ -134,10 +199,11 @@ const ProcessLifecycleSimulator = () => {
 
   const clearLogs = () => {
     setLogs([]);
+    playSound("clear_logs");
     addNotification("Logs limpiados", "info");
   };
 
-  // Realizar transición manual
+  // Realizar transición manual de estado
   const performTransition = (processId, newState, reason = "") => {
     try {
       setProcesses((prev) =>
@@ -148,24 +214,38 @@ const ProcessLifecycleSimulator = () => {
               p
             );
 
-            // Validar transición antes de realizarla
+            // Validar que la transición sea válida
             if (!VALID_TRANSITIONS[p.state].includes(newState)) {
               throw new Error(`Transición inválida: ${p.state} → ${newState}`);
             }
 
-            setAnimatingTransition({
+            const oldState = p.state;
+
+            // **CORRECCIÓN PRINCIPAL: Usar el procesador**
+            processorRef.current.manualTransition(
+              updatedProcess,
+              newState,
+              reason
+            );
+
+            // Crear animación
+            const newAnimation = {
+              id: crypto.randomUUID(),
               processId: processId,
-              fromState: p.state,
+              fromState: oldState,
               toState: newState,
               timestamp: new Date(),
-              reason: reason || "Transición manual"
-            });
+              durationMs: animationDurationMs,
+              reason: reason || "Transición manual",
+            };
 
-            // Realizar la transición
-            updatedProcess.transition(newState, reason);
+            setProcessAnimations((prev) => [...prev, newAnimation]);
 
-            // Actualizar las colas del procesador
-            updateProcessorQueues(updatedProcess, p.state, newState);
+            setTimeout(() => {
+              setProcessAnimations((prev) =>
+                prev.filter((anim) => anim.id !== newAnimation.id)
+              );
+            }, animationDurationMs + 500);
 
             return updatedProcess;
           }
@@ -173,21 +253,18 @@ const ProcessLifecycleSimulator = () => {
         })
       );
 
-      setTimeout(() => setAnimatingTransition(null), animationDurationMs);
-
-      playSound("transition");
+      playSound("manual_transition");
       addNotification(`PID ${processId}: ${reason}`, "success");
     } catch (error) {
       playSound("error");
       addNotification(error.message, "error");
     }
   };
-
-  // Actualizar las colas del procesador según los cambios de estado
+  // Actualizar colas del procesador según cambios de estado
   const updateProcessorQueues = (process, oldState, newState) => {
     const processor = processorRef.current;
 
-    // Remover de las colas anteriores si es necesario
+    // Remover de colas anteriores
     if (oldState === STATES.READY) {
       const readyIndex = processor.readyQueue.findIndex(
         (p) => p.pid === process.pid
@@ -206,7 +283,7 @@ const ProcessLifecycleSimulator = () => {
       processor.currentProcess = null;
     }
 
-    // Agregar a las nuevas colas según el nuevo estado
+    // Agregar a nuevas colas
     if (
       newState === STATES.READY &&
       !processor.readyQueue.find((p) => p.pid === process.pid)
@@ -222,145 +299,144 @@ const ProcessLifecycleSimulator = () => {
     }
   };
 
-  // Añadir notificación
-  const addNotification = (message, type = "info", pid = null) => {
-    const notification = {
-      id: crypto.randomUUID(),
-      pid,
+  // Agregar notificación al sistema
+  const addNotification = (message, type = "info") => {
+    const notif = {
+      id: Date.now(),
       message,
       type,
       timestamp: new Date(),
     };
-    setNotifications((prev) => [...prev, notification]);
-    
-    // Auto-remove notification con tiempo variable según el tipo
-    const timeout = type === "error" ? 5000 : 3000;
+    setNotifications((prev) => [...prev, notif]);
     setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
-    }, timeout);
+      setNotifications((prev) => prev.filter((n) => n.id !== notif.id));
+    }, 3000);
   };
 
-  // Función de simulación automática
+  // Simulación automática de transiciones
   const runAutomaticSimulation = () => {
     setProcesses((prevProcesses) => {
       const processor = processorRef.current;
-      const updatedProcesses = [...prevProcesses];
+      const updated = [...prevProcesses];
 
-      // Admitir procesos NEW a READY
-      updatedProcesses.forEach((process) => {
-        if (process.state === STATES.NEW && Math.random() < 0.3) {
+      processor.setAutoScheduling(false);
+      let transitionMade = false;
+
+      // 1️⃣ Admitir procesos nuevos
+      if (!transitionMade) {
+        const newProcesses = updated.filter((p) => p.state === STATES.NEW);
+        if (newProcesses.length > 0 && Math.random() < 0.4) {
+          const p =
+            newProcesses[Math.floor(Math.random() * newProcesses.length)];
           try {
-            processor.admitProcess(process);
-            // La animación se maneja en el listener onTransition del proceso
-          } catch (error) {
-            console.error("Error admitiendo proceso:", error);
-          }
-        }
-      });
-
-      // Planificar procesos (READY → RUNNING)
-      processor.schedule();
-
-      if (processor.currentProcess && Math.random() < 0.4) {
-        const currentProcess = processor.currentProcess;
-        const randomEvent = Math.random();
-
-        if (randomEvent < 0.25) {
-          // Proceso termina
-          try {
-            currentProcess.transition(STATES.TERMINATED, "Auto-finalización");
-            processor.currentProcess = null;
-            addNotification(`Proceso ${currentProcess.pid} terminado`, "success");
-          } catch (error) {
-            console.error("Error terminando proceso:", error);
-          }
-        } else if (randomEvent < 0.6) {
-          // Proceso va a E/S (RUNNING → BLOCKED)
-          try {
-            currentProcess.transition(STATES.BLOCKED, "Auto-E/S");
-            processor.blockedQueue.push(currentProcess);
-            processor.currentProcess = null;
-
-            // Simular que después de un tiempo vuelve a READY
-            setTimeout(() => {
-              setProcesses((processes) =>
-                processes.map((p) => {
-                  if (p.pid === currentProcess.pid && p.state === STATES.BLOCKED) {
-                    try {
-                      p.transition(STATES.READY, "Auto-E/S completada");
-                      const blockedIndex = processor.blockedQueue.findIndex(
-                        (bp) => bp.pid === p.pid
-                      );
-                      if (blockedIndex >= 0) {
-                        processor.blockedQueue.splice(blockedIndex, 1);
-                      }
-                      processor.readyQueue.push(p);
-                    } catch (error) {
-                      console.error("Error completando E/S:", error);
-                    }
-                  }
-                  return p;
-                })
-              );
-            }, Math.random() * 3000 + 1500); // Tiempo más realista para E/S
-          } catch (error) {
-            console.error("Error enviando a E/S:", error);
-          }
-        } else {
-          // Quantum expirado (RUNNING → READY)
-          try {
-            currentProcess.transition(STATES.READY, "Auto-quantum expirado");
-            processor.readyQueue.push(currentProcess);
-            processor.currentProcess = null;
-          } catch (error) {
-            console.error("Error con quantum:", error);
+            processor.admitProcess(p);
+            transitionMade = true;
+          } catch (err) {
+            console.error("Error admitiendo proceso:", err);
           }
         }
       }
 
-      // Algunos procesos BLOCKED vuelven a READY aleatoriamente
-      updatedProcesses.forEach((process) => {
-        if (process.state === STATES.BLOCKED && Math.random() < 0.15) {
-          try {
-            process.transition(STATES.READY, "Auto-E/S completada");
-            const blockedIndex = processor.blockedQueue.findIndex(
-              (p) => p.pid === process.pid
-            );
-            if (blockedIndex >= 0) {
-              processor.blockedQueue.splice(blockedIndex, 1);
-            }
-            processor.readyQueue.push(process);
-          } catch (error) {
-            console.error("Error completando E/S:", error);
-          }
+      // 2️⃣ Planificar procesos listos
+      if (
+        !transitionMade &&
+        processor.readyQueue.length > 0 &&
+        !processor.currentProcess
+      ) {
+        try {
+          processor.schedule();
+          transitionMade = true;
+        } catch (err) {
+          console.error("Error planificando proceso:", err);
         }
-      });
+      }
 
-      return updatedProcesses;
+      // 3️⃣ Manejar proceso en ejecución
+      if (!transitionMade && processor.currentProcess) {
+        const p = processor.currentProcess;
+        const rand = Math.random();
+
+        if (rand < 0.2) {
+          // Finaliza
+          processor.manualTransition(
+            p,
+            STATES.TERMINATED,
+            "Finalización automática"
+          );
+          processor.currentProcess = null;
+          transitionMade = true;
+          // Reproducir sonido cuando un proceso termina en modo automático
+          playSound("process_terminated");
+        } else if (rand < 0.5 && p.canBeBlocked()) {
+          // Bloqueo
+          processor.manualTransition(p, STATES.BLOCKED, "Solicitud de E/S");
+          processor.currentProcess = null;
+          transitionMade = true;
+
+          // Regreso automático desde BLOQUEADO → READY
+          const ioDelay = Math.random() * 4000 + 2000;
+          setTimeout(() => {
+            setProcesses((procs) =>
+              procs.map((proc) => {
+                if (proc.pid === p.pid && proc.state === STATES.BLOCKED) {
+                  try {
+                    processor.manualTransition(
+                      proc,
+                      STATES.READY,
+                      "E/S completada"
+                    );
+                  } catch (err) {
+                    console.error("Error completando E/S:", err);
+                  }
+                }
+                return proc;
+              })
+            );
+          }, ioDelay);
+        } else {
+          // Quantum expirado
+          processor.manualTransition(p, STATES.READY, "Quantum expirado");
+          processor.currentProcess = null;
+          transitionMade = true;
+        }
+      }
+
+      return updated;
     });
   };
 
-  // Modo automático
+  // Manejar modo automático
   useEffect(() => {
     if (isAutoMode) {
+      processorRef.current.setAutoScheduling(false);
+
       intervalRef.current = setInterval(() => {
         runAutomaticSimulation();
       }, speed);
     } else {
-      clearInterval(intervalRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      clearProcessAnimations();
     }
 
-    return () => clearInterval(intervalRef.current);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      clearProcessAnimations();
+    };
   }, [isAutoMode, speed]);
 
   // Ajustar duración de animaciones según velocidad
   useEffect(() => {
-    // Mapeo: más lento -> animación más larga y visible
-    if (speed >= 3000) setAnimationDurationMs(2500);
-    else if (speed >= 2000) setAnimationDurationMs(2000);
-    else if (speed >= 1000) setAnimationDurationMs(1500);
-    else if (speed >= 500) setAnimationDurationMs(1200);
-    else setAnimationDurationMs(1000);
+    if (speed >= 3000) setAnimationDurationMs(4000);
+    else if (speed >= 2000) setAnimationDurationMs(3500);
+    else if (speed >= 1000) setAnimationDurationMs(3000);
+    else if (speed >= 500) setAnimationDurationMs(2500);
+    else setAnimationDurationMs(2000);
   }, [speed]);
 
   // Generar reporte CSV
@@ -379,16 +455,17 @@ const ProcessLifecycleSimulator = () => {
       const registros = `AX:0x${p.registers.AX.toString(16)
         .padStart(2, "0")
         .toUpperCase()},BX:0x${p.registers.BX.toString(16)
-          .padStart(2, "0")
-          .toUpperCase()},CX:0x${p.registers.CX.toString(16)
-            .padStart(2, "0")
-            .toUpperCase()}`;
+        .padStart(2, "0")
+        .toUpperCase()},CX:0x${p.registers.CX.toString(16)
+        .padStart(2, "0")
+        .toUpperCase()}`;
       const systemCalls = p.systemCalls.join(";");
 
-      csvContent += `${p.pid},${p.state},${p.remainingTime
-        },${p.getTimeInCurrentState()},${totalTransitions},${p.priority},0x${p.pc
-          .toString(16)
-          .toUpperCase()},"${registros}","${systemCalls}","${historial}"\n`;
+      csvContent += `${p.pid},${p.state},${
+        p.remainingTime
+      },${p.getTimeInCurrentState()},${totalTransitions},${p.priority},0x${p.pc
+        .toString(16)
+        .toUpperCase()},"${registros}","${systemCalls}","${historial}"\n`;
     });
 
     // Agregar estadísticas generales
@@ -401,8 +478,9 @@ const ProcessLifecycleSimulator = () => {
     // Agregar información del procesador
     const processor = processorRef.current;
     csvContent += `\nEstado del Procesador\n`;
-    csvContent += `Proceso Actual,${processor.currentProcess?.pid || "Ninguno"
-      }\n`;
+    csvContent += `Proceso Actual,${
+      processor.currentProcess?.pid || "Ninguno"
+    }\n`;
     csvContent += `Cola Ready,${processor.readyQueue
       .map((p) => p.pid)
       .join(";")}\n`;
@@ -432,13 +510,19 @@ const ProcessLifecycleSimulator = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `process_report_${new Date().toISOString().split("T")[0]
-      }_${new Date().toLocaleTimeString().replace(/:/g, "-")}.csv`;
+    a.download = `process_report_${
+      new Date().toISOString().split("T")[0]
+    }_${new Date().toLocaleTimeString().replace(/:/g, "-")}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
 
     playSound("success");
     addNotification("Reporte CSV generado exitosamente", "success");
+  };
+
+  // Limpiar animaciones de procesos
+  const clearProcessAnimations = () => {
+    setProcessAnimations([]);
   };
 
   // Reiniciar simulación
@@ -447,8 +531,38 @@ const ProcessLifecycleSimulator = () => {
     setSelectedProcess(null);
     setNextPID(1);
     setIsAutoMode(false);
-    processorRef.current = new Processor(); // Reiniciar el procesador
+    clearProcessAnimations();
+    processorRef.current = new Processor();
+    playSound("reset_simulation");
     addNotification("Simulación reiniciada", "info");
+  };
+
+  // Funciones para control manual
+  const handleManualTransition = (processId, newState, reason = "") => {
+    performTransition(processId, newState, reason);
+  };
+
+  const handleManualCreateProcess = () => {
+    createProcess(false); // Crear proceso normal en modo manual
+  };
+
+  const openManualControl = () => {
+    setIsManualControlOpen(true);
+  };
+
+  const closeManualControl = () => {
+    setIsManualControlOpen(false);
+  };
+
+  // Manejar cambio de modo automático con sonido
+  const handleToggleAutoMode = () => {
+    const newMode = !isAutoMode;
+    setIsAutoMode(newMode);
+    
+    // Reproducir sonido solo cuando se activa el modo automático
+    if (newMode) {
+      playSound("start_auto_simulation");
+    }
   };
 
   // Obtener estadísticas generales
@@ -521,196 +635,25 @@ const ProcessLifecycleSimulator = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Panel de Control */}
-          <div className="lg:col-span-3 bg-white/95 backdrop-blur-xl rounded-3xl p-6 border-2 border-blue-200/40 shadow-2xl hover:shadow-3xl transition-all duration-300 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 to-purple-50/30"></div>
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
-            <div className="relative z-10">
-              <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center justify-center gap-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
-                  <Settings className="w-5 h-5 text-white drop-shadow-sm" />
-                </div>
-                <span className="text-gray-800">Control de Simulación</span>
-              </h2>
-
-              {/* Controles básicos */}
-              <div className="space-y-4 mb-6">
-                <button
-                  onClick={createProcess}
-                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-3 px-4 rounded-xl font-semibold text-base transition-all duration-300 flex items-center justify-center gap-3 transform hover:scale-105 shadow-lg hover:shadow-xl"
-                >
-                  <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
-                    <Plus className="w-3 h-3" />
-                  </div>
-                  <span>Crear Proceso</span>
-                </button>
-
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => setIsAutoMode(!isAutoMode)}
-                    className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transform hover:scale-105 ${isAutoMode
-                      ? "bg-red-500 hover:bg-red-600 text-white"
-                      : "bg-blue-500 hover:bg-blue-600 text-white"
-                      }`}
-                  >
-                    <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
-                      {isAutoMode ? (
-                        <Pause className="w-3 h-3" />
-                      ) : (
-                        <Play className="w-3 h-3" />
-                      )}
-                    </div>
-                    <span>{isAutoMode ? "Pausar" : "Auto"}</span>
-                  </button>
-
-                  <button
-                    onClick={resetSimulation}
-                    className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transform hover:scale-105"
-                  >
-                    <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
-                      <RotateCcw className="w-3 h-3" />
-                    </div>
-                    <span>Reset</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Velocidad */}
-              <div className="mb-6 text-center">
-                <label className="block text-gray-700 text-sm font-medium mb-2">
-                  ⚡ Velocidad de Simulación
-                </label>
-                <select
-                  value={speed}
-                  onChange={(e) => setSpeed(Number(e.target.value))}
-                  className="w-full bg-white/80 text-gray-700 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm hover:shadow-md transition-all duration-200 font-medium"
-                >
-                  <option value={3000} className="text-gray-900">🐢 Muy Lenta</option>
-                  <option value={2000} className="text-gray-900">
-                    🐌 Lenta
-                  </option>
-                  <option value={1000} className="text-gray-900">
-                    ⚡ Normal
-                  </option>
-                  <option value={500} className="text-gray-900">
-                    🚀 Rápida
-                  </option>
-                </select>
-
-                <div className="mt-3 grid grid-cols-2 gap-3 items-center">
-                  <div className="text-left text-xs text-gray-600 font-medium">Intervalo (ms)</div>
-                  <input
-                    type="number"
-                    min={100}
-                    step={100}
-                    value={speed}
-                    onChange={(e) => setSpeed(Math.max(100, Number(e.target.value)))}
-                    className="w-full bg-white/80 text-gray-700 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                  />
-                </div>
-              </div>
-
-              {/* Toggle detalles */}
-              <div className="mb-6 text-center">
-                <label className="flex items-center justify-center gap-3 cursor-pointer p-3 bg-white/60 rounded-lg border border-gray-200 hover:shadow-md transition-all duration-200">
-                  <input
-                    type="checkbox"
-                    checked={showDetails}
-                    onChange={(e) => setShowDetails(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  />
-                  <span className="text-gray-700 text-sm font-medium">
-                    🔧 Mostrar Detalles Técnicos
-                  </span>
-                </label>
-              </div>
-
-              {/* Toggle sonido */}
-              <div className="mb-6 text-center">
-                <label className="flex items-center justify-center gap-3 cursor-pointer p-3 bg-white/60 rounded-lg border border-gray-200 hover:shadow-md transition-all duration-200">
-                  <input
-                    type="checkbox"
-                    checked={soundEnabled}
-                    onChange={(e) => setSoundEnabled(e.target.checked)}
-                    className="w-4 h-4 text-purple-600 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
-                  />
-                  <span className="text-gray-700 text-sm font-medium">
-                    🔊 Sonidos de Eventos
-                  </span>
-                </label>
-              </div>
-
-              {/* Estadísticas generales */}
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-6 mb-6 text-center border border-blue-200/50 shadow-lg">
-                <h3 className="text-gray-800 font-bold mb-4 flex items-center justify-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
-                    <Info className="w-4 h-4 text-white" />
-                  </div>
-                  📊 Estadísticas
-                </h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg border border-blue-200/30">
-                    <span className="text-gray-700 font-medium">
-                      Total Procesos:
-                    </span>
-                    <span className="font-bold text-blue-600 text-lg">
-                      {generalStats.total}
-                    </span>
-                  </div>
-                  {Object.entries(generalStats.byState).map(
-                    ([state, count]) => (
-                      <div
-                        key={state}
-                        className="flex justify-between items-center p-2 bg-white/40 rounded-lg border border-blue-200/20"
-                      >
-                        <span className="text-gray-600">{state}:</span>
-                        <span className="font-semibold text-gray-800">
-                          {count}
-                        </span>
-                      </div>
-                    )
-                  )}
-                </div>
-
-                {/* Información del procesador */}
-                <div className="mt-4 pt-4 border-t border-blue-200/50">
-                  <h4 className="text-gray-700 font-semibold mb-2 text-xs">
-                    🖥️ Estado del Procesador
-                  </h4>
-                  <div className="space-y-2 text-xs">
-                    <div className="flex justify-between items-center p-2 bg-white/40 rounded-lg">
-                      <span className="text-gray-600">Ejecutando:</span>
-                      <span className="font-semibold text-gray-800">
-                        {processorRef.current.currentProcess?.pid || "Ninguno"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center p-2 bg-white/40 rounded-lg">
-                      <span className="text-gray-600">Cola Ready:</span>
-                      <span className="font-semibold text-gray-800">
-                        {processorRef.current.readyQueue.length}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center p-2 bg-white/40 rounded-lg">
-                      <span className="text-gray-600">Cola Blocked:</span>
-                      <span className="font-semibold text-gray-800">
-                        {processorRef.current.blockedQueue.length}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={generateReport}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 px-4 rounded-xl font-semibold text-base transition-all duration-300 flex items-center justify-center gap-3 transform hover:scale-105 shadow-lg hover:shadow-xl"
-            >
-              <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
-                <Download className="w-3 h-3" />
-              </div>
-              <span>📊 Exportar Reporte CSV</span>
-            </button>
-          </div>
+          <ControlPanel
+            createProcess={createProcess}
+            setIsAutoMode={setIsAutoMode}
+            isAutoMode={isAutoMode}
+            resetSimulation={resetSimulation}
+            speed={speed}
+            setSpeed={setSpeed}
+            showDetails={showDetails}
+            setShowDetails={setShowDetails}
+            soundEnabled={soundEnabled}
+            setSoundEnabled={setSoundEnabled}
+            generalStats={generalStats}
+            processorRef={processorRef}
+            generateReport={generateReport}
+            isBlocked={isBlocked}
+            setIsBlocked={setIsBlocked}
+            onOpenManualControl={openManualControl}
+            onToggleAutoMode={handleToggleAutoMode}
+          />
 
           {/* Diagrama de Estados */}
           <div className="lg:col-span-9 bg-white/95 backdrop-blur-xl rounded-3xl p-8 border-2 border-green-200/40 shadow-2xl hover:shadow-3xl transition-all duration-300 relative overflow-hidden">
@@ -722,7 +665,9 @@ const ProcessLifecycleSimulator = () => {
                   <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
                   <div className="w-6 h-6 border-2 border-white rounded-full relative z-10"></div>
                 </div>
-                <span className="text-gray-800">Diagrama de Estados</span>
+                <span className="text-gray-800">
+                  Diagrama de Estados con Procesos Móviles
+                </span>
               </h2>
 
               {/* Contenedor del diagrama con posición relativa para las animaciones */}
@@ -736,7 +681,9 @@ const ProcessLifecycleSimulator = () => {
                     <div className="col-span-3 flex justify-center">
                       <StateNode
                         state={STATES.NEW}
-                        processes={processes.filter((p) => p.state === STATES.NEW)}
+                        processes={processes.filter(
+                          (p) => p.state === STATES.NEW
+                        )}
                         onProcessClick={setSelectedProcess}
                         animatingTransition={animatingTransition}
                       />
@@ -746,7 +693,9 @@ const ProcessLifecycleSimulator = () => {
                     <div className="flex justify-center">
                       <StateNode
                         state={STATES.READY}
-                        processes={processes.filter((p) => p.state === STATES.READY)}
+                        processes={processes.filter(
+                          (p) => p.state === STATES.READY
+                        )}
                         onProcessClick={setSelectedProcess}
                         animatingTransition={animatingTransition}
                       />
@@ -755,7 +704,9 @@ const ProcessLifecycleSimulator = () => {
                     <div className="flex justify-center">
                       <StateNode
                         state={STATES.RUNNING}
-                        processes={processes.filter((p) => p.state === STATES.RUNNING)}
+                        processes={processes.filter(
+                          (p) => p.state === STATES.RUNNING
+                        )}
                         onProcessClick={setSelectedProcess}
                         animatingTransition={animatingTransition}
                       />
@@ -764,7 +715,9 @@ const ProcessLifecycleSimulator = () => {
                     <div className="flex justify-center">
                       <StateNode
                         state={STATES.BLOCKED}
-                        processes={processes.filter((p) => p.state === STATES.BLOCKED)}
+                        processes={processes.filter(
+                          (p) => p.state === STATES.BLOCKED
+                        )}
                         onProcessClick={setSelectedProcess}
                         animatingTransition={animatingTransition}
                       />
@@ -774,7 +727,9 @@ const ProcessLifecycleSimulator = () => {
                     <div className="col-span-3 flex justify-center">
                       <StateNode
                         state={STATES.TERMINATED}
-                        processes={processes.filter((p) => p.state === STATES.TERMINATED)}
+                        processes={processes.filter(
+                          (p) => p.state === STATES.TERMINATED
+                        )}
                         onProcessClick={setSelectedProcess}
                         animatingTransition={animatingTransition}
                       />
@@ -785,29 +740,15 @@ const ProcessLifecycleSimulator = () => {
                 {/* Flechas de transición estáticas */}
                 <StaticTransitionArrows />
 
-                {/* Animaciones de transición */}
-                {animatingTransition && (
-                  <div className="absolute inset-0 z-40">
-                    <TransitionArrow
-                      from={animatingTransition.fromState}
-                      to={animatingTransition.toState}
-                      durationMs={animationDurationMs}
-                    />
-                  </div>
-                )}
-
-                {/* Indicador de proceso activo */}
-                {animatingTransition && (
-                  <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50">
-                    <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-full shadow-2xl border-2 border-white/20 flex items-center gap-3 animate-bounce">
-                      <div className="w-3 h-3 bg-yellow-300 rounded-full animate-pulse"></div>
-                      <span className="font-bold text-sm">
-                        PID {animatingTransition.processId}: {animatingTransition.fromState} → {animatingTransition.toState}
-                      </span>
-                      <div className="w-3 h-3 bg-yellow-300 rounded-full animate-pulse"></div>
-                    </div>
-                  </div>
-                )}
+                {/* Animaciones de procesos móviles */}
+                <ProcessAnimations
+                  animations={processAnimations}
+                  onAnimationComplete={(animation) => {
+                    console.log(
+                      `Animación completada: P${animation.processId} ${animation.fromState} → ${animation.toState}`
+                    );
+                  }}
+                />
               </div>
 
               {/* Leyenda */}
@@ -835,25 +776,25 @@ const ProcessLifecycleSimulator = () => {
                 {/* Indicadores de flujo */}
                 <div className="mt-4 pt-3 border-t border-gray-200/50">
                   <div className="text-center text-xs text-gray-600 mb-2 font-medium">
-                    🔄 Flujos de Transición Activos
+                    🎯 Procesos en Movimiento
                   </div>
                   <div className="flex justify-center gap-4 text-xs">
                     <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-gray-600">Admisión</span>
+                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-gray-600">P1, P2, P3...</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                      <span className="text-gray-600">Planificación</span>
+                      <span className="text-gray-600">Partículas</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                      <span className="text-gray-600">E/S</span>
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                      <span className="text-gray-600">Trayectorias</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                      <span className="text-gray-600">Terminación</span>
-                    </div>
+                  </div>
+                  <div className="text-center text-xs text-gray-500 mt-2">
+                    Los procesos se mueven físicamente siguiendo las
+                    transiciones
                   </div>
                 </div>
               </div>
@@ -872,7 +813,9 @@ const ProcessLifecycleSimulator = () => {
                     <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
                     <Info className="w-4 h-4 text-white" />
                   </div>
-                  <span className="text-base md:text-lg font-bold text-gray-800">Información del Proceso</span>
+                  <span className="text-base md:text-lg font-bold text-gray-800">
+                    Información del Proceso
+                  </span>
                 </div>
                 {selectedProcess ? (
                   <ProcessInfo
@@ -891,7 +834,8 @@ const ProcessLifecycleSimulator = () => {
                       No hay proceso seleccionado
                     </h3>
                     <p className="text-gray-500 text-xs">
-                      Haz clic en un proceso del diagrama para ver su información detallada
+                      Haz clic en un proceso del diagrama para ver su
+                      información detallada
                     </p>
                   </div>
                 )}
@@ -927,16 +871,30 @@ const ProcessLifecycleSimulator = () => {
                 {(showAllLogs ? logs : logs.slice(-100)).map((l) => (
                   <div key={l.id} className="flex justify-between gap-2">
                     <span className="text-gray-600">PID {l.pid}</span>
-                    <span className="text-gray-800 font-semibold">{l.from} → {l.to}</span>
+                    <span className="text-gray-800 font-semibold">
+                      {l.from} → {l.to}
+                    </span>
                     <span className="text-gray-500">{l.reason}</span>
                     <span className="text-gray-400">{l.source}</span>
-                    <span className="text-gray-400">{l.timestamp.toLocaleTimeString()}</span>
+                    <span className="text-gray-400">
+                      {l.timestamp.toLocaleTimeString()}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
         )}
+
+        {/* Componente de Control Manual */}
+        <ManualProcessControl
+          isOpen={isManualControlOpen}
+          onClose={closeManualControl}
+          processes={processes}
+          onManualTransition={handleManualTransition}
+          onManualCreateProcess={handleManualCreateProcess}
+          logs={logs}
+        />
       </div>
     </div>
   );
