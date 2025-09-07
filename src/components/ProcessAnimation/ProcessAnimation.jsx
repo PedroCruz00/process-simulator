@@ -4,11 +4,19 @@ import { HardDrive, Keyboard, Printer, Wifi, Database } from "lucide-react";
 
 // Posiciones de los nodos (en % del contenedor)
 const NODE_POSITIONS = {
+  // Layout desktop
   New: { x: 50, y: 15 },
   Ready: { x: 16, y: 50 },
   Running: { x: 50, y: 50 },
   Blocked: { x: 84, y: 50 },
   Terminated: { x: 50, y: 85 },
+
+  // Layout móvil (vertical stack)
+  New_mobile: { x: 50, y: 15 },
+  Ready_mobile: { x: 20, y: 50 },
+  Running_mobile: { x: 50, y: 50 },
+  Blocked_mobile: { x: 80, y: 50 },
+  Terminated_mobile: { x: 50, y: 85 },
 };
 
 // Colores para cada transición
@@ -47,6 +55,17 @@ export const ProcessAnimation = ({
   const [isVisible, setIsVisible] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [ioIcon, setIoIcon] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     if (!isCompleted) {
@@ -79,8 +98,13 @@ export const ProcessAnimation = ({
 
   if (isCompleted || !isVisible) return null;
 
-  const startPosition = NODE_POSITIONS[fromState];
-  const endPosition = NODE_POSITIONS[toState];
+  // Usar posiciones móviles o desktop según el tamaño de pantalla
+  const startPosition = isMobile
+    ? NODE_POSITIONS[`${fromState}_mobile`] || NODE_POSITIONS[fromState]
+    : NODE_POSITIONS[fromState];
+  const endPosition = isMobile
+    ? NODE_POSITIONS[`${toState}_mobile`] || NODE_POSITIONS[toState]
+    : NODE_POSITIONS[toState];
   const transitionKey = `${fromState}->${toState}`;
   const color = TRANSITION_COLORS[transitionKey] || "#6366f1";
 
@@ -133,7 +157,7 @@ export const ProcessAnimation = ({
 
       {/* Nodo del proceso que se mueve */}
       <motion.div
-        className="absolute w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-2xl border-2 border-white/30"
+        className="absolute w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-2xl border border-white/30 sm:border-2"
         style={{
           backgroundColor: color,
           left: `${startPosition.x}%`,
@@ -185,7 +209,7 @@ export const ProcessAnimation = ({
       {/* Icono de E/S cuando va a Blocked */}
       {toState === "Blocked" && ioIcon && (
         <motion.div
-          className="absolute flex items-center justify-center w-8 h-8 rounded-full bg-white shadow-lg border-2"
+          className="absolute flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white shadow-lg border sm:border-2"
           style={{
             borderColor: ioIcon.color,
             left: `${endPosition.x}%`,
@@ -210,14 +234,17 @@ export const ProcessAnimation = ({
             ease: "backOut",
           }}
         >
-          <ioIcon.icon className="w-4 h-4" style={{ color: ioIcon.color }} />
+          <ioIcon.icon
+            className="w-3 h-3 sm:w-4 sm:h-4"
+            style={{ color: ioIcon.color }}
+          />
         </motion.div>
       )}
 
       {/* Etiqueta de dispositivo E/S */}
       {toState === "Blocked" && ioIcon && (
         <motion.div
-          className="absolute transform -translate-x-1/2 px-2 py-1 rounded-lg text-xs font-medium text-white shadow-md"
+          className="absolute transform -translate-x-1/2 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-xs font-medium text-white shadow-md"
           style={{
             backgroundColor: ioIcon.color,
             left: `${endPosition.x}%`,
@@ -248,7 +275,7 @@ export const ProcessAnimation = ({
         {Array.from({ length: 3 }, (_, i) => (
           <motion.div
             key={`particle-${id}-${i}`}
-            className="absolute w-2 h-2 rounded-full"
+            className="absolute w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full"
             style={{
               backgroundColor: color,
               boxShadow: `0 0 8px ${color}`,
@@ -280,7 +307,7 @@ export const ProcessAnimation = ({
 
       {/* Etiqueta de transición */}
       <motion.div
-        className="absolute transform -translate-x-1/2 -translate-y-1/2 px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg border-2 border-white/20"
+        className="absolute transform -translate-x-1/2 -translate-y-1/2 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-bold text-white shadow-lg border border-white/20 sm:border-2"
         style={{
           backgroundColor: color,
           left: `${(startPosition.x + endPosition.x) / 2}%`,

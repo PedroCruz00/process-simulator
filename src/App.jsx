@@ -558,7 +558,7 @@ const ProcessLifecycleSimulator = () => {
   const handleToggleAutoMode = () => {
     const newMode = !isAutoMode;
     setIsAutoMode(newMode);
-    
+
     // Reproducir sonido solo cuando se activa el modo automático
     if (newMode) {
       playSound("start_auto_simulation");
@@ -582,38 +582,38 @@ const ProcessLifecycleSimulator = () => {
   const generalStats = getGeneralStats();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-8 flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
       <div className="w-full max-w-[1400px] mx-auto">
         {/* Header */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 mb-12 border-2 border-blue-200/30 text-center shadow-2xl relative overflow-hidden">
+        <div className="bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 lg:mb-12 border-2 border-blue-200/30 text-center shadow-2xl relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"></div>
           <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-gradient-to-tr from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"></div>
-          <div className="relative z-10 ">
-            <div className="flex items-center justify-center mb-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 rounded-2xl flex items-center justify-center mr-4 shadow-xl relative overflow-hidden">
+          <div className="relative z-10">
+            <div className="flex flex-col sm:flex-row items-center justify-center mb-4 gap-3 sm:gap-4">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 rounded-2xl flex items-center justify-center shadow-xl relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
-                <Cpu className="w-7 h-7 text-white drop-shadow-lg" />
+                <Cpu className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-lg" />
               </div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-800 via-blue-800 to-purple-800 bg-clip-text text-transparent">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-800 via-blue-800 to-purple-800 bg-clip-text text-transparent text-center">
                 Simulador de Estados de Procesos
               </h1>
             </div>
-            <p className="text-gray-600 text-base font-medium mb-4">
+            <p className="text-gray-600 text-sm sm:text-base font-medium mb-4 px-2">
               Máquina de estados finita con visualización animada y análisis en
               tiempo real
             </p>
-            <div className="flex justify-center mt-4 space-x-4">
-              <div className="flex items-center text-xs text-gray-600 bg-white/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-200/50 shadow-sm">
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mt-4">
+              <div className="flex items-center text-xs text-gray-600 bg-white/60 backdrop-blur-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border border-gray-200/50 shadow-sm">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
                 <span className="font-medium">Sistema Operativo</span>
               </div>
-              <div className="flex items-center text-xs text-gray-600 bg-white/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-200/50 shadow-sm">
+              <div className="flex items-center text-xs text-gray-600 bg-white/60 backdrop-blur-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border border-gray-200/50 shadow-sm">
                 <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
                 <span className="font-medium">Tiempo Real</span>
               </div>
-              <div className="flex items-center text-xs text-gray-600 bg-white/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-200/50 shadow-sm">
+              <div className="flex items-center text-xs text-gray-600 bg-white/60 backdrop-blur-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border border-gray-200/50 shadow-sm">
                 <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
                 <span className="font-medium">Análisis Avanzado</span>
               </div>
@@ -622,7 +622,7 @@ const ProcessLifecycleSimulator = () => {
         </div>
 
         {/* Notificaciones */}
-        <div className="fixed top-8 right-8 z-50 space-y-4">
+        <div className="fixed top-4 right-4 sm:top-8 sm:right-8 z-50 space-y-2 sm:space-y-4 max-w-xs sm:max-w-sm">
           {notifications.map((notif) => (
             <Notification
               key={notif.id}
@@ -633,50 +633,108 @@ const ProcessLifecycleSimulator = () => {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6">
           {/* Panel de Control */}
-          <ControlPanel
-            createProcess={createProcess}
-            setIsAutoMode={setIsAutoMode}
-            isAutoMode={isAutoMode}
-            resetSimulation={resetSimulation}
-            speed={speed}
-            setSpeed={setSpeed}
-            showDetails={showDetails}
-            setShowDetails={setShowDetails}
-            soundEnabled={soundEnabled}
-            setSoundEnabled={setSoundEnabled}
-            generalStats={generalStats}
-            processorRef={processorRef}
-            generateReport={generateReport}
-            isBlocked={isBlocked}
-            setIsBlocked={setIsBlocked}
-            onOpenManualControl={openManualControl}
-            onToggleAutoMode={handleToggleAutoMode}
-          />
+          <div className="xl:col-span-3 order-2 xl:order-1">
+            <ControlPanel
+              createProcess={createProcess}
+              setIsAutoMode={setIsAutoMode}
+              isAutoMode={isAutoMode}
+              resetSimulation={resetSimulation}
+              speed={speed}
+              setSpeed={setSpeed}
+              showDetails={showDetails}
+              setShowDetails={setShowDetails}
+              soundEnabled={soundEnabled}
+              setSoundEnabled={setSoundEnabled}
+              generalStats={generalStats}
+              processorRef={processorRef}
+              generateReport={generateReport}
+              isBlocked={isBlocked}
+              setIsBlocked={setIsBlocked}
+              onOpenManualControl={openManualControl}
+              onToggleAutoMode={handleToggleAutoMode}
+            />
+          </div>
 
           {/* Diagrama de Estados */}
-          <div className="lg:col-span-9 bg-white/95 backdrop-blur-xl rounded-3xl p-8 border-2 border-green-200/40 shadow-2xl hover:shadow-3xl transition-all duration-300 relative overflow-hidden">
+          <div className="xl:col-span-9 order-1 xl:order-2 bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border-2 border-green-200/40 shadow-2xl hover:shadow-3xl transition-all duration-300 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-green-50/30 to-emerald-50/30"></div>
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500"></div>
             <div className="relative z-10">
-              <h2 className="text-xl font-bold text-gray-800 mb-4 text-center flex items-center justify-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg relative overflow-hidden">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 text-center flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
-                  <div className="w-6 h-6 border-2 border-white rounded-full relative z-10"></div>
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-white rounded-full relative z-10"></div>
                 </div>
-                <span className="text-gray-800">
+                <span className="text-gray-800 text-center">
                   Diagrama de Estados con Procesos Móviles
                 </span>
               </h2>
 
               {/* Contenedor del diagrama con posición relativa para las animaciones */}
-              <div className="relative h-[700px] bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 overflow-visible border-2 border-green-200/30 shadow-inner">
+              <div className="relative h-[600px] sm:h-[700px] lg:h-[800px] bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl sm:rounded-2xl p-2 sm:p-4 lg:p-8 overflow-visible border-2 border-green-200/30 shadow-inner">
                 <div className="absolute inset-0 bg-gradient-to-br from-green-100/20 to-emerald-100/20 rounded-2xl"></div>
 
-                {/* Grid de estados */}
+                {/* Grid de estados - Mejorado para móvil */}
                 <div className="relative z-20 h-full">
-                  <div className="grid grid-cols-3 gap-16 h-full items-center">
+                  {/* Layout móvil: Vertical stack */}
+                  <div className="block sm:hidden h-full flex flex-col justify-between py-4">
+                    {/* Fila superior - NEW */}
+                    <div className="flex justify-center mb-4">
+                      <StateNode
+                        state={STATES.NEW}
+                        processes={processes.filter(
+                          (p) => p.state === STATES.NEW
+                        )}
+                        onProcessClick={setSelectedProcess}
+                        animatingTransition={animatingTransition}
+                      />
+                    </div>
+
+                    {/* Fila media - READY, RUNNING, BLOCKED en línea horizontal */}
+                    <div className="flex justify-between items-center mb-4 px-4">
+                      <StateNode
+                        state={STATES.READY}
+                        processes={processes.filter(
+                          (p) => p.state === STATES.READY
+                        )}
+                        onProcessClick={setSelectedProcess}
+                        animatingTransition={animatingTransition}
+                      />
+                      <StateNode
+                        state={STATES.RUNNING}
+                        processes={processes.filter(
+                          (p) => p.state === STATES.RUNNING
+                        )}
+                        onProcessClick={setSelectedProcess}
+                        animatingTransition={animatingTransition}
+                      />
+                      <StateNode
+                        state={STATES.BLOCKED}
+                        processes={processes.filter(
+                          (p) => p.state === STATES.BLOCKED
+                        )}
+                        onProcessClick={setSelectedProcess}
+                        animatingTransition={animatingTransition}
+                      />
+                    </div>
+
+                    {/* Fila inferior - TERMINATED */}
+                    <div className="flex justify-center">
+                      <StateNode
+                        state={STATES.TERMINATED}
+                        processes={processes.filter(
+                          (p) => p.state === STATES.TERMINATED
+                        )}
+                        onProcessClick={setSelectedProcess}
+                        animatingTransition={animatingTransition}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Layout desktop: Grid original */}
+                  <div className="hidden sm:grid grid-cols-3 gap-8 lg:gap-16 h-full items-center">
                     {/* Fila superior */}
                     <div className="col-span-3 flex justify-center">
                       <StateNode
@@ -752,21 +810,21 @@ const ProcessLifecycleSimulator = () => {
               </div>
 
               {/* Leyenda */}
-              <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-200/50 shadow-lg">
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-200/50 shadow-lg">
                 <h4 className="text-gray-700 font-semibold mb-3 text-center text-sm">
                   🎨 Leyenda de Estados
                 </h4>
-                <div className="grid grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
                   {Object.entries(STATE_COLORS).map(([state, color]) => (
                     <div
                       key={state}
                       className="flex items-center gap-2 p-2 bg-white/60 rounded-lg border border-gray-200/30 shadow-sm hover:shadow-md transition-all duration-200"
                     >
                       <div
-                        className="w-4 h-4 rounded-full border-2 border-gray-300 shadow-sm"
+                        className="w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-gray-300 shadow-sm flex-shrink-0"
                         style={{ backgroundColor: color }}
                       ></div>
-                      <span className="text-gray-700 text-xs font-medium">
+                      <span className="text-gray-700 text-xs font-medium truncate">
                         {state}
                       </span>
                     </div>
@@ -778,21 +836,21 @@ const ProcessLifecycleSimulator = () => {
                   <div className="text-center text-xs text-gray-600 mb-2 font-medium">
                     🎯 Procesos en Movimiento
                   </div>
-                  <div className="flex justify-center gap-4 text-xs">
+                  <div className="flex flex-wrap justify-center gap-2 sm:gap-4 text-xs">
                     <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                      <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-pulse"></div>
                       <span className="text-gray-600">P1, P2, P3...</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full animate-pulse"></div>
                       <span className="text-gray-600">Partículas</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-purple-500 rounded-full animate-pulse"></div>
                       <span className="text-gray-600">Trayectorias</span>
                     </div>
                   </div>
-                  <div className="text-center text-xs text-gray-500 mt-2">
+                  <div className="text-center text-xs text-gray-500 mt-2 px-2">
                     Los procesos se mueven físicamente siguiendo las
                     transiciones
                   </div>
@@ -803,17 +861,17 @@ const ProcessLifecycleSimulator = () => {
         </div>
 
         {/* Footer de Información del Proceso */}
-        <div className="mt-8 w-full">
-          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-5 border-2 border-purple-200/40 shadow-2xl transition-all duration-300 overflow-hidden max-w-[1400px] mx-auto">
+        <div className="mt-6 sm:mt-8 w-full">
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-5 border-2 border-purple-200/40 shadow-2xl transition-all duration-300 overflow-hidden max-w-[1400px] mx-auto">
             <div className="relative">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500"></div>
               <div className="pt-3">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center shadow-sm relative overflow-hidden">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center shadow-sm relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
-                    <Info className="w-4 h-4 text-white" />
+                    <Info className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                   </div>
-                  <span className="text-base md:text-lg font-bold text-gray-800">
+                  <span className="text-sm sm:text-base md:text-lg font-bold text-gray-800">
                     Información del Proceso
                   </span>
                 </div>
@@ -826,14 +884,14 @@ const ProcessLifecycleSimulator = () => {
                     }
                   />
                 ) : (
-                  <div className="text-center text-gray-500 py-2 flex flex-col items-center justify-center">
-                    <div className="w-10 h-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-2 shadow-sm">
-                      <Info className="w-5 h-5 text-gray-400" />
+                  <div className="text-center text-gray-500 py-4 sm:py-2 flex flex-col items-center justify-center">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-2 shadow-sm">
+                      <Info className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                     </div>
                     <h3 className="text-sm font-semibold text-gray-700 mb-1">
                       No hay proceso seleccionado
                     </h3>
-                    <p className="text-gray-500 text-xs">
+                    <p className="text-gray-500 text-xs px-4 sm:px-0">
                       Haz clic en un proceso del diagrama para ver su
                       información detallada
                     </p>
@@ -846,39 +904,48 @@ const ProcessLifecycleSimulator = () => {
 
         {/* Panel de Logs de Transiciones (FSM) */}
         {logs.length > 0 && (
-          <div className="mt-6 w-full">
-            <div className="bg-white/90 rounded-2xl p-4 border border-gray-200 shadow max-w-[1400px] mx-auto">
-              <div className="flex justify-between items-center mb-3">
+          <div className="mt-4 sm:mt-6 w-full">
+            <div className="bg-white/90 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-200 shadow max-w-[1400px] mx-auto">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2 sm:gap-0">
                 <h3 className="text-sm font-semibold text-gray-700">
                   📝 Registro de Transiciones ({logs.length} total)
                 </h3>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => setShowAllLogs(!showAllLogs)}
-                    className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors"
+                    className="flex-1 sm:flex-none px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors"
                   >
-                    {showAllLogs ? "Mostrar últimos 100" : "Mostrar todos"}
+                    {showAllLogs ? "Últimos 100" : "Mostrar todos"}
                   </button>
                   <button
                     onClick={clearLogs}
-                    className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded-lg transition-colors"
+                    className="flex-1 sm:flex-none px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded-lg transition-colors"
                   >
                     🗑️ Limpiar
                   </button>
                 </div>
               </div>
-              <div className="max-h-60 overflow-y-auto text-xs space-y-1 font-mono">
+              <div className="max-h-48 sm:max-h-60 overflow-y-auto text-xs space-y-1 font-mono">
                 {(showAllLogs ? logs : logs.slice(-100)).map((l) => (
-                  <div key={l.id} className="flex justify-between gap-2">
-                    <span className="text-gray-600">PID {l.pid}</span>
-                    <span className="text-gray-800 font-semibold">
-                      {l.from} → {l.to}
-                    </span>
-                    <span className="text-gray-500">{l.reason}</span>
-                    <span className="text-gray-400">{l.source}</span>
-                    <span className="text-gray-400">
-                      {l.timestamp.toLocaleTimeString()}
-                    </span>
+                  <div
+                    key={l.id}
+                    className="flex flex-col sm:flex-row justify-between gap-1 sm:gap-2 p-2 bg-gray-50 rounded"
+                  >
+                    <div className="flex gap-2">
+                      <span className="text-gray-600 font-semibold">
+                        PID {l.pid}
+                      </span>
+                      <span className="text-gray-800 font-semibold">
+                        {l.from} → {l.to}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 text-gray-500">
+                      <span className="truncate">{l.reason}</span>
+                      <span className="text-gray-400">{l.source}</span>
+                      <span className="text-gray-400">
+                        {l.timestamp.toLocaleTimeString()}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
