@@ -139,7 +139,7 @@ const ControlPanel = ({
               className="w-4 h-4 text-blue-600 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
             />
             <span className="text-gray-700 text-xs sm:text-sm font-medium">
-              🔧 Mostrar Detalles Técnicos
+               Mostrar Detalles Técnicos
             </span>
           </label>
         </div>
@@ -154,7 +154,7 @@ const ControlPanel = ({
               className="w-4 h-4 text-purple-600 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
             />
             <span className="text-gray-700 text-xs sm:text-sm font-medium">
-              🔊 Sonidos de Eventos
+               Sonidos de Eventos
             </span>
           </label>
         </div>
@@ -165,7 +165,7 @@ const ControlPanel = ({
             <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
               <Info className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
             </div>
-            <span>📊 Estadísticas</span>
+            <span> Estadísticas</span>
           </h3>
           <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
             <div className="flex justify-between items-center p-2 sm:p-3 bg-white/60 rounded-lg border border-blue-200/30">
@@ -194,7 +194,7 @@ const ControlPanel = ({
           {/* Información del procesador */}
           <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-blue-200/50">
             <h4 className="text-gray-700 font-semibold mb-2 text-xs">
-              🖥️ Estado del Procesador
+              ️ Estado del Procesador
             </h4>
             <div className="space-y-1.5 sm:space-y-2 text-xs">
               <div className="flex justify-between items-center p-1.5 sm:p-2 bg-white/40 rounded-lg">

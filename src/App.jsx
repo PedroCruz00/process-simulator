@@ -24,6 +24,7 @@ import ProcessInfo from "./components/ProcessInfo";
 import Notification from "./components/Notification";
 import ControlPanel from "./components/controlPanel/ControlPanel";
 import ManualProcessControl from "./components/ManualProcessControl";
+import SettingsModal from "./components/SettingsModal";
 
 const ProcessLifecycleSimulator = () => {
   const [processes, setProcesses] = useState([]);
@@ -43,6 +44,37 @@ const ProcessLifecycleSimulator = () => {
   const processorRef = useRef(new Processor());
   const [isBlocked, setIsBlocked] = useState(false);
   const [isManualControlOpen, setIsManualControlOpen] = useState(false);
+
+  // Agregar estado para configuraciones
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState({
+    audio: {
+      enabled: false, // mover soundEnabled aquí
+      volume: 50,
+      types: {
+        transitions: true,
+        creation: true,
+        termination: true,
+        errors: true
+      }
+    },
+    display: {
+      showTechnicalDetails: true, // mover showDetails aquí
+      smoothAnimations: true,
+      showParticles: true,
+      theme: "default"
+    },
+    simulation: {
+      defaultSpeed: 1000, // mover speed aquí
+      autoStart: false,
+      maxConcurrentProcesses: 10
+    },
+    reports: {
+      autoGenerate: false,
+      format: "csv",
+      includeDetailed: true
+    }
+  });
 
   // Crear nuevo proceso
   const createProcess = (shouldBlock = false) => {
@@ -581,6 +613,50 @@ const ProcessLifecycleSimulator = () => {
 
   const generalStats = getGeneralStats();
 
+  // Actualizar configuraciones
+  const updateSettings = (newSettings) => {
+    setSettings(newSettings);
+    
+    // Sincronizar con estados existentes
+    setSoundEnabled(newSettings.audio.enabled);
+    setShowDetails(newSettings.display.showTechnicalDetails);
+    setSpeed(newSettings.simulation.defaultSpeed);
+  };
+
+  // Restablecer configuraciones
+  const resetSettings = () => {
+    const defaultSettings = {
+      audio: {
+        enabled: false,
+        volume: 50,
+        types: {
+          transitions: true,
+          creation: true,
+          termination: true,
+          errors: true
+        }
+      },
+      display: {
+        showTechnicalDetails: true,
+        smoothAnimations: true,
+        showParticles: true,
+        theme: "default"
+      },
+      simulation: {
+        defaultSpeed: 1000,
+        autoStart: false,
+        maxConcurrentProcesses: 10
+      },
+      reports: {
+        autoGenerate: false,
+        format: "csv",
+        includeDetailed: true
+      }
+    };
+    setSettings(defaultSettings);
+    updateSettings(defaultSettings);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
       <div className="w-full max-w-[1400px] mx-auto">
@@ -599,6 +675,14 @@ const ProcessLifecycleSimulator = () => {
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-800 via-blue-800 to-purple-800 bg-clip-text text-transparent text-center">
                 Simulador de Estados de Procesos
               </h1>
+              {/* Botón de configuraciones en el header */}
+              <button
+                onClick={() => setIsSettingsOpen(true)}
+                className="ml-auto lg:ml-4 w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 rounded-xl flex items-center justify-center shadow-lg transition-all duration-300 transform hover:scale-105"
+                title="Configuraciones"
+              >
+                <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </button>
             </div>
             <p className="text-gray-600 text-sm sm:text-base font-medium mb-4 px-2">
               Máquina de estados finita con visualización animada y análisis en
@@ -961,6 +1045,15 @@ const ProcessLifecycleSimulator = () => {
           onManualTransition={handleManualTransition}
           onManualCreateProcess={handleManualCreateProcess}
           logs={logs}
+        />
+
+        {/* Componente de Configuraciones */}
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          settings={settings}
+          onUpdateSettings={updateSettings}
+          onResetSettings={resetSettings}
         />
       </div>
     </div>
