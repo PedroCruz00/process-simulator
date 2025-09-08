@@ -55,7 +55,6 @@ button:focus-visible {
 
 /* Animaciones personalizadas */
 @keyframes pulse {
-
   0%,
   100% {
     opacity: 1;
@@ -69,7 +68,6 @@ button:focus-visible {
 }
 
 @keyframes pulseGlow {
-
   0%,
   100% {
     box-shadow: 0 0 5px currentColor;
@@ -204,7 +202,12 @@ button:focus-visible {
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
@@ -259,13 +262,17 @@ button:focus-visible {
 }
 
 .glow-effect::before {
-  content: '';
+  content: "";
   position: absolute;
   top: -50%;
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 70%
+  );
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -296,22 +303,42 @@ button:focus-visible {
 }
 
 /* Responsividad */
+@media (max-width: 640px) {
+  .state-node {
+    width: 60px;
+    height: 60px;
+    font-size: 0.6rem;
+  }
+
+  .transition-label {
+    font-size: 0.5rem;
+    padding: 0.1rem 0.3rem;
+  }
+}
+
 @media (max-width: 768px) {
+  .state-node {
+    width: 70px;
+    height: 70px;
+    font-size: 0.65rem;
+  }
+
+  .transition-label {
+    font-size: 0.55rem;
+    padding: 0.15rem 0.35rem;
+  }
+}
+
+@media (max-width: 1024px) {
   .state-node {
     width: 100px;
     height: 100px;
     font-size: 0.8rem;
   }
-
-  .transition-label {
-    font-size: 0.7rem;
-    padding: 0.25rem 0.5rem;
-  }
 }
 
 /* Accesibilidad */
 @media (prefers-reduced-motion: reduce) {
-
   .animate-pulse,
   .animate-bounce,
   .animate-spin,

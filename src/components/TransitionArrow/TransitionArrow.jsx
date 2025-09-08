@@ -2,11 +2,19 @@ import React, { useState, useEffect, useMemo } from "react";
 
 // Posiciones de los nodos (en % del contenedor)
 const NODE_POSITIONS = {
+  // Layout desktop
   New: { x: 50, y: 15 },
   Ready: { x: 16, y: 50 },
   Running: { x: 50, y: 50 },
   Blocked: { x: 84, y: 50 },
   Terminated: { x: 50, y: 85 },
+
+  // Layout móvil (vertical stack)
+  New_mobile: { x: 50, y: 15 },
+  Ready_mobile: { x: 20, y: 50 },
+  Running_mobile: { x: 50, y: 50 },
+  Blocked_mobile: { x: 80, y: 50 },
+  Terminated_mobile: { x: 50, y: 85 },
 };
 
 // Colores para cada transición
@@ -15,42 +23,54 @@ const TRANSITION_COLORS = {
     stroke: "#10b981",
     glow: "#10b981",
     shadow: "rgba(16, 185, 129, 0.6)",
-    particle: "#34d399"
+    particle: "#34d399",
   },
   "Ready->Running": {
     stroke: "#3b82f6",
     glow: "#3b82f6",
     shadow: "rgba(59, 130, 246, 0.6)",
-    particle: "#60a5fa"
+    particle: "#60a5fa",
   },
   "Running->Ready": {
     stroke: "#06b6d4",
     glow: "#06b6d4",
     shadow: "rgba(6, 182, 212, 0.6)",
-    particle: "#22d3ee"
+    particle: "#22d3ee",
   },
   "Running->Blocked": {
     stroke: "#f59e0b",
     glow: "#f59e0b",
     shadow: "rgba(245, 158, 11, 0.6)",
-    particle: "#fbbf24"
+    particle: "#fbbf24",
   },
   "Blocked->Ready": {
     stroke: "#10b981",
     glow: "#10b981",
     shadow: "rgba(16, 185, 129, 0.6)",
-    particle: "#34d399"
+    particle: "#34d399",
   },
   "Running->Terminated": {
     stroke: "#ef4444",
     glow: "#ef4444",
     shadow: "rgba(239, 68, 68, 0.6)",
-    particle: "#f87171"
+    particle: "#f87171",
   },
 };
 
 // Componente para mostrar todas las transiciones válidas de forma estática
 export const StaticTransitionArrows = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const validTransitions = [
     { from: "New", to: "Ready" },
     { from: "Ready", to: "Running" },
@@ -78,23 +98,24 @@ export const StaticTransitionArrows = () => {
             orient="auto"
             markerUnits="strokeWidth"
           >
-            <path
-              d="M0,0 L0,5 L5,2.5 z"
-              fill="#6b7280"
-              stroke="none"
-            />
+            <path d="M0,0 L0,5 L5,2.5 z" fill="#6b7280" stroke="none" />
           </marker>
         </defs>
 
         {validTransitions.map(({ from, to }) => {
-          const start = NODE_POSITIONS[from];
-          const end = NODE_POSITIONS[to];
+          // Usar posiciones móviles o desktop según el tamaño de pantalla
+          const start = isMobile
+            ? NODE_POSITIONS[`${from}_mobile`] || NODE_POSITIONS[from]
+            : NODE_POSITIONS[from];
+          const end = isMobile
+            ? NODE_POSITIONS[`${to}_mobile`] || NODE_POSITIONS[to]
+            : NODE_POSITIONS[to];
           const key = `${from}->${to}`;
           const colors = TRANSITION_COLORS[key] || {
             stroke: "#6b7280",
             glow: "#6b7280",
             shadow: "rgba(107, 114, 128, 0.6)",
-            particle: "#9ca3af"
+            particle: "#9ca3af",
           };
 
           // Calcular puntos de control para una curva suave
@@ -143,6 +164,17 @@ export const StaticTransitionArrows = () => {
 export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [particles, setParticles] = useState([]);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     setIsVisible(true);
@@ -151,7 +183,7 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
     const newParticles = Array.from({ length: 5 }, (_, i) => ({
       id: i,
       delay: i * (durationMs / 6),
-      opacity: 1 - (i * 0.15)
+      opacity: 1 - i * 0.15,
     }));
     setParticles(newParticles);
 
@@ -164,8 +196,14 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
   }, [from, to, durationMs]);
 
   const pathData = useMemo(() => {
-    const start = NODE_POSITIONS[from] || { x: 50, y: 50 };
-    const end = NODE_POSITIONS[to] || { x: 50, y: 50 };
+    // Usar posiciones móviles o desktop según el tamaño de pantalla
+    const start = isMobile
+      ? NODE_POSITIONS[`${from}_mobile`] ||
+        NODE_POSITIONS[from] || { x: 50, y: 50 }
+      : NODE_POSITIONS[from] || { x: 50, y: 50 };
+    const end = isMobile
+      ? NODE_POSITIONS[`${to}_mobile`] || NODE_POSITIONS[to] || { x: 50, y: 50 }
+      : NODE_POSITIONS[to] || { x: 50, y: 50 };
 
     // Calcular puntos de control para una curva suave
     const dx = end.x - start.x;
@@ -197,7 +235,7 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
       cp1: { x: cp1x, y: cp1y },
       cp2: { x: cp2x, y: cp2y },
       path: `M ${start.x} ${start.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${end.x} ${end.y}`,
-      distance
+      distance,
     };
   }, [from, to]);
 
@@ -206,7 +244,7 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
     stroke: "#6366f1",
     glow: "#6366f1",
     shadow: "rgba(99, 102, 241, 0.6)",
-    particle: "#818cf8"
+    particle: "#818cf8",
   };
 
   if (!isVisible) return null;
@@ -219,7 +257,7 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
           className="w-full h-full"
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
-          style={{ filter: 'drop-shadow(0 0 8px rgba(0,0,0,0.3))' }}
+          style={{ filter: "drop-shadow(0 0 8px rgba(0,0,0,0.3))" }}
         >
           <defs>
             {/* Marcador de flecha */}
@@ -232,15 +270,17 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
               orient="auto"
               markerUnits="strokeWidth"
             >
-              <path
-                d="M0,0 L0,6 L6,3 z"
-                fill={colors.stroke}
-                stroke="none"
-              />
+              <path d="M0,0 L0,6 L6,3 z" fill={colors.stroke} stroke="none" />
             </marker>
 
             {/* Filtro de brillo */}
-            <filter id={`glow-${key}`} x="-50%" y="-50%" width="200%" height="200%">
+            <filter
+              id={`glow-${key}`}
+              x="-50%"
+              y="-50%"
+              width="200%"
+              height="200%"
+            >
               <feGaussianBlur stdDeviation="1" result="coloredBlur" />
               <feMerge>
                 <feMergeNode in="coloredBlur" />
@@ -249,7 +289,13 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
             </filter>
 
             {/* Gradiente para la línea */}
-            <linearGradient id={`gradient-${key}`} x1="0%" y1="0%" x2="100%" y2="0%">
+            <linearGradient
+              id={`gradient-${key}`}
+              x1="0%"
+              y1="0%"
+              x2="100%"
+              y2="0%"
+            >
               <stop offset="0%" stopColor={colors.stroke} stopOpacity="0.8" />
               <stop offset="50%" stopColor={colors.glow} stopOpacity="1" />
               <stop offset="100%" stopColor={colors.stroke} stopOpacity="0.9" />
@@ -277,7 +323,7 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
             style={{
               strokeDasharray: pathData.distance * 2,
               strokeDashoffset: pathData.distance * 2,
-              animation: `drawPath-${key} ${durationMs}ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`
+              animation: `drawPath-${key} ${durationMs}ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`,
             }}
           />
         </svg>
@@ -295,7 +341,7 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
               left: `${pathData.start.x}%`,
               top: `${pathData.start.y}%`,
               opacity: particle.opacity,
-              animation: `moveParticle-${key} ${durationMs}ms ${particle.delay}ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`
+              animation: `moveParticle-${key} ${durationMs}ms ${particle.delay}ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`,
             }}
           />
         ))}
@@ -310,7 +356,11 @@ export const TransitionArrow = ({ from, to, durationMs = 1200 }) => {
             top: `${(pathData.start.y + pathData.end.y) / 2 - 5}%`,
             backgroundColor: colors.stroke,
             boxShadow: `0 0 15px ${colors.shadow}`,
-            animation: `fadeInScale ${durationMs * 0.3}ms ease-out forwards, fadeOutScale ${durationMs * 0.2}ms ease-in ${durationMs * 0.8}ms forwards`
+            animation: `fadeInScale ${
+              durationMs * 0.3
+            }ms ease-out forwards, fadeOutScale ${durationMs * 0.2}ms ease-in ${
+              durationMs * 0.8
+            }ms forwards`,
           }}
         >
           {from} → {to}
